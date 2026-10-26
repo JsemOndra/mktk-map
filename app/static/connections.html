@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="title.connections">mktk-map</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#111823; --panel2:#0e141d; --line:#1e2a3a;
+    --txt:#c9d6e3; --dim:#5f7288; --mono:'JetBrains Mono','Cascadia Code','Fira Code',ui-monospace,Consolas,monospace;
+    --ok:#3ddc84; --warn:#ffb020; --err:#ff5d5d; --wifi:#4db8ff; --s1:#3a8ce0; --s2:#d9762f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:13px}
+  header.top{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  header.top h1{font-size:15px;margin:0;letter-spacing:2px;font-weight:600}
+  header.top h1 b{color:var(--ok)} header.top h1 span{color:var(--dim);font-weight:400}
+  .hbtn{border:1px solid var(--line);color:var(--dim);text-decoration:none;background:none;font-family:inherit;
+    font-size:12px;padding:5px 10px;border-radius:4px;cursor:pointer}
+  .hbtn:hover{color:var(--txt);border-color:var(--dim)}
+  #meta{color:var(--dim);font-size:11px;margin-left:auto}
+  main{padding:20px;max-width:1500px;margin:0 auto}
+  h2{font-size:11px;letter-spacing:3px;color:var(--dim);text-transform:uppercase;margin:24px 0 10px;
+    display:flex;gap:12px;align-items:center}
+  h3{font-size:10px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;margin:0 0 6px;font-weight:400}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+  .dim{color:var(--dim)} .ok{color:var(--ok)} .warn{color:var(--warn)} .err{color:var(--err)}
+  input,select{background:var(--panel2);border:1px solid var(--line);color:var(--txt);font-family:inherit;
+    font-size:12px;padding:5px 8px;border-radius:4px;outline:none}
+  input:focus,select:focus{border-color:var(--wifi)}
+  label.ck{color:var(--dim);font-size:11px;display:flex;gap:5px;align-items:center}
+  input[type=checkbox]{accent-color:var(--ok)}
+  button.b{background:none;border:1px solid var(--line);color:var(--txt);font-family:inherit;
+    font-size:11px;padding:4px 10px;border-radius:4px;cursor:pointer;white-space:nowrap}
+  button.b:hover:not(:disabled){border-color:var(--dim)}
+  button.b.primary{border-color:var(--ok);color:var(--ok)}
+  button.b:disabled{opacity:.35;cursor:not-allowed}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .status{display:flex;gap:18px;flex-wrap:wrap;font-size:11px;color:var(--dim)}
+  .status b{color:var(--txt);font-weight:600}
+  .banner{border:1px solid var(--warn);background:#2a2008;color:var(--warn);border-radius:6px;padding:10px 14px;margin-top:10px;font-size:12px;line-height:1.6}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+  .seg button{background:none;border:none;color:var(--dim);font-family:inherit;font-size:10.5px;padding:3px 9px;cursor:pointer}
+  .seg button.on{background:var(--panel2);color:var(--txt)}
+  .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:6px}
+  .chip{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:4px;padding:5px 9px;cursor:pointer;
+    font-size:11.5px;background:var(--panel);display:flex;gap:8px;align-items:baseline;transition:opacity .6s}
+  .chip:hover{border-color:var(--dim)} .chip.on{border-color:var(--wifi)}
+  .chip.idle{opacity:.4}
+  .chip .bg{position:absolute;left:0;top:0;bottom:0;background:#13233a;transition:width 1s ease;z-index:0}
+  .chip>span{position:relative;z-index:1}
+  .chip .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chip .r{color:var(--dim);font-size:10.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .chip .r b{font-weight:400;display:inline-block;text-align:right}
+  .chip .r .c{width:3ch} .chip .r .d,.chip .r .u{width:9ch}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{color:var(--dim);font-size:10px;letter-spacing:1px;text-transform:uppercase;text-align:left;
+    padding:6px 8px;border-bottom:1px solid var(--line);font-weight:400;white-space:nowrap;cursor:default}
+  th.s{cursor:pointer} th.s:hover{color:var(--txt)} th.on{color:var(--wifi)}
+  td{padding:5px 8px;border-bottom:1px solid var(--panel2);vertical-align:top}
+  td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  tr.closed td{opacity:.45}
+  tr.cl{cursor:pointer} tr.cl:hover td{background:var(--panel2)}
+  .tblwrap{overflow-x:auto}
+  .name{font-weight:700} .sub{color:var(--dim);font-size:10.5px}
+  .tag{display:inline-block;font-size:9.5px;padding:0 5px;border-radius:3px;background:#1a2330;color:var(--dim);margin-left:4px;vertical-align:1px}
+  .tag.ft{background:#2a2008;color:var(--warn)}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:1000px){ .cols{grid-template-columns:1fr} }
+  .scroll{max-height:420px;overflow:auto}
+  .bar{display:inline-block;height:5px;border-radius:3px;background:var(--s1);vertical-align:middle;margin-right:6px}
+  .note{font-size:11px;color:var(--dim);margin-top:8px;line-height:1.5}
+  details.load summary{cursor:pointer;color:var(--dim);font-size:11px;margin-top:8px}
+  .lcharts{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;margin-top:8px}
+  @media (max-width:900px){ .lcharts{grid-template-columns:1fr} }
+  .lcharts h4{margin:0 0 2px;font-size:10px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;font-weight:400}
+  .chgrid{stroke:var(--line);stroke-width:1} .chax{fill:var(--dim);font-size:9px;font-family:var(--mono)}
+  .chdown{fill:var(--err);opacity:.13} .chx{stroke:var(--dim);stroke-width:1;stroke-dasharray:2 2}
+  .chdot{stroke:var(--panel);stroke-width:2}
+  .chtip{position:absolute;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:5px 8px;font-size:11px;pointer-events:none;white-space:nowrap;z-index:5}
+  .chtip i,.chlegend i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  .chtt{color:var(--dim);margin-bottom:2px} .chempty{color:var(--dim);font-size:11px;padding:20px 0}
+  .chlegend{display:flex;gap:14px;font-size:10.5px;color:var(--dim);margin-bottom:2px}
+</style>
+<link rel="icon" href="/static/logo.svg" type="image/svg+xml">
+<script src="/static/i18n.js"></script>
+</head>
+<body>
+<header class="top">
+  <img src="/static/logo.svg" width="64" height="64" alt="">
+  <h1>MKTK<b>·</b>MAP <span>/ <span data-i18n="conn.title"></span></span></h1>
+  <a class="hbtn" href="/" data-i18n="nav.back"></a>
+  <a class="hbtn" href="/dns" data-i18n="nav.dns_analysis"></a>
+  <span id="meta" data-i18n="common.loading"></span>
+</header>
+<main>
+  <div class="panel"><div class="status" id="status"></div><div id="dnsbanner"></div>
+    <details class="load" id="loadbox"><summary data-i18n="conn.load_summary"></summary>
+      <div class="row" style="margin-top:6px"><span class="seg" id="lrange"><button data-h="1">1 h</button><button data-h="24" class="on">24 h</button><button data-h="168" data-i18n="common.7d"></button></span>
+        <span class="dim" id="lsum" style="font-size:11px"></span></div>
+      <div class="lcharts"><div><h4 data-i18n="conn.poll_time"></h4><div id="lpoll"></div></div><div><h4 data-i18n="conn.router_cpu"></h4><div id="lcpu"></div></div></div>
+      <div class="note" data-i18n="conn.load_note"></div>
+    </details></div>
+
+  <h2><span data-i18n="conn.active_clients"></span>
+    <span class="seg" id="chipsort" style="letter-spacing:0;text-transform:none">
+      <button data-o="name" class="on" data-i18n="conn.sort_name"></button><button data-o="rate" data-i18n="conn.sort_rate"></button></span></h2>
+  <div class="chips" id="chips"></div>
+
+  <div id="detail"></div>
+
+  <h2><span data-i18n="conn.connections"></span> <span class="dim" id="cnt" style="letter-spacing:0;text-transform:none"></span></h2>
+  <div class="panel">
+    <div class="row" style="margin-bottom:8px">
+      <select id="fclient"><option value="" data-i18n="conn.all_clients"></option></select>
+      <input id="fq" data-i18n-placeholder="conn.filter" style="width:260px">
+      <label class="ck"><input type="checkbox" id="fclosed" checked> <span data-i18n="conn.f_closed"></span></label>
+      <label class="ck"><input type="checkbox" id="flocal" checked> <span data-i18n="conn.f_local"></span></label>
+      <label class="ck"><input type="checkbox" id="fpause"> <span data-i18n="conn.f_pause"></span></label>
+    </div>
+    <div class="tblwrap"><table>
+      <thead><tr>
+        <th data-i18n="conn.col.client"></th><th data-i18n="conn.col.dest"></th><th data-i18n="conn.col.port_service"></th><th data-i18n="conn.col.state"></th>
+        <th class="s n" data-s="dur" data-i18n="conn.col.duration"></th><th class="s n" data-s="up" data-i18n="conn.col.sent"></th>
+        <th class="s n" data-s="down" data-i18n="conn.col.received"></th><th class="s n on" data-s="rate" data-i18n="conn.col.rate"></th>
+      </tr></thead><tbody id="conns"></tbody></table></div>
+    <div class="note" data-i18n-html="conn.note"></div>
+  </div>
+
+  <div id="overview"></div>
+</main>
+<script src="/static/charts.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+function esc(s){return (s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+const fmtB=b=>{ if(b==null) return "–"; const u=["B","kB","MB","GB","TB"]; let i=0, v=b; while(v>=1000&&i<u.length-1){v/=1000;i++} return (i?v.toFixed(v>=100?0:1):v)+" "+u[i]; };
+const fmtR=b=>{ if(!b) return "–"; const u=["b/s","kb/s","Mb/s","Gb/s"]; let i=0, v=b; while(v>=1000&&i<u.length-1){v/=1000;i++} return (i?v.toFixed(v>=100?0:1):v.toFixed(0))+" "+u[i]; };
+const fmtD=s=>{ s=Math.max(0,Math.round(s)); if(s<60) return s+" s"; if(s<3600) return Math.floor(s/60)+" min "+(s%60)+" s"; if(s<86400) return Math.floor(s/3600)+" h "+Math.floor(s%3600/60)+" min"; return Math.floor(s/86400)+" d "+Math.floor(s%86400/3600)+" h"; };
+const tm=ts=>ts? new Date(ts*1000).toLocaleTimeString(I18N.locale) : "–";
+let D=null, skew=0, sortKey="rate", selected=new URLSearchParams(location.search).get("client")||"", detail=null, cred=null;
+const now=()=>Date.now()/1000+skew;
+
+function statusHtml(){
+  const tr=D.tracker, d=D.dns, r=D.dns_router||{};
+  return `<span>tracker: <b>${tr.last_poll? "poll "+tm(tr.last_poll) : esc(t("conn.st.waiting"))}</b> · ${tr.poll_ms??"–"} ms · ${esc(tn("conn.st.rows",tr.rows))} · ${esc(t("conn.st.interval",{s:tr.interval}))}${tr.last_error? ' · <span class="err">'+esc(tr.last_error)+'</span>':""}</span>
+    <span>${esc(t("conn.st.conns"))}: <b>${D.active}</b> ${esc(t("conn.st.active"))}, ${D.total-D.active} ${esc(t("conn.st.closed"))}</span>
+    <span>${esc(t("conn.st.dns_cache"))}: <b>${tr.dns_cache}</b> ${esc(t("conn.st.addresses"))}</span>
+    ${pollTxt()}
+    <span>DNS log: ${r.configured? '<b class="ok">'+esc(t("common.on"))+'</b>' : '<b class="warn">'+esc(t("common.off"))+'</b>'}
+      · ${esc(tn("conn.st.received_queries",d.queries))}${d.last_packet? " · "+esc(t("conn.st.last",{time:tm(d.last_packet)})):""}${d.error? ' · <span class="err">'+esc(d.error)+'</span>':""}</span>`;
+}
+function pollTxt(){
+  const ps=D.poll_summary||{}, f=v=>v==null?"–":Math.round(v);
+  const part=(k,l)=> ps[k]? `${l} ø <b>${f(ps[k].avg)}</b> / p95 ${f(ps[k].p95)} / max ${f(ps[k].max)} ms` : "";
+  const txt=[part("monitor","monitor"),part("conntrack","conntrack")].filter(Boolean).join(" · ");
+  return `<span>${esc(D.router||"router")} (1 h): ${txt||esc(t("common.no_data_yet"))}${D.router_cpu!=null? ` · CPU <b>${esc(D.router_cpu)} %</b>`:""}</span>`;
+}
+let loadH=24;
+async function loadLoad(){
+  if(!$("#loadbox").open) return;
+  let L; try{ L=await (await fetch("/api/connections/load?hours="+loadH)).json(); }catch(e){ return; }
+  const now=Date.now()/1000, range=[now-loadH*3600, now], gap=Math.max(120, loadH*3600/300*3);
+  tsChart($("#lpoll"),{series:[{name:"monitor",color:"var(--s1)",pts:L.polls.map(x=>[x.ts,x.monitor])},
+    {name:"conntrack",color:"var(--s2)",pts:L.polls.map(x=>[x.ts,x.conntrack])}],range,unit:"ms",fmt:v=>v.toFixed(0),gap,height:130});
+  tsChart($("#lcpu"),{series:[{name:"CPU",color:"var(--s1)",pts:L.cpu.map(x=>[x.ts,x.cpu])}],range,unit:"%",fmt:v=>v.toFixed(0),max:100,gap,height:130});
+  const s=L.summary_24h||{}, f=v=>v==null?"–":Math.round(v);
+  const LBL={monitor:t("conn.lbl.monitor"),slow:t("conn.lbl.slow"),conntrack:"conntrack"};
+  const st=Object.entries(L.steps_1h||{});
+  $("#lsum").innerHTML=esc("24 h: "+Object.entries(s).map(([k,v])=>`${LBL[k]||k} ø ${f(v.avg)} ms, p95 ${f(v.p95)}, max ${f(v.max)} (${v.count}×${v.rows_avg? ", ø "+tn("conn.st.rows",Math.round(v.rows_avg)):""})`).join(" · "))
+    + (st.length? "<br>"+esc(t("conn.lbl.steps"))+": "+st.map(([k,v])=>`${esc(k)} <b>${f(v)}</b>`).join(" · ")+" ms" : "");
+}
+$("#loadbox").addEventListener("toggle",loadLoad);
+document.querySelectorAll("#lrange button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("#lrange button").forEach(x=>x.classList.toggle("on",x===b)); loadH=+b.dataset.h; loadLoad(); }));
+function dnsBanner(){
+  const d=D.dns, r=D.dns_router||{};
+  const rej=Object.entries(d.rejected||{});
+  let h="";
+  if(!r.configured && !d.queries){
+    h=`<div class="banner">${t("conn.dns.off",{host:esc(location.hostname),port:d.port})}
+      <div class="row" style="margin-top:6px">${credForm()}<button class="b primary" ${cred&&cred.active?"":"disabled"} onclick="dnsEnable()">${esc(t("conn.dns.enable"))}</button><span id="dmsg"></span></div></div>`;
+  } else if(!d.queries){
+    h=`<div class="banner">${esc(t("conn.dns.on_no_data",{remote:r.remote,topic:r.topics||"?"}))}
+      ${esc(t("conn.dns.packets"))}: <b>${d.packets}</b>${d.last_packet? " ("+esc(t("conn.st.last",{time:tm(d.last_packet)}))+")":""}.
+      ${d.packets && !rej.length? esc(t("conn.dns.no_query_lines")) : ""}
+      <div class="row" style="margin-top:6px">${credForm()}<button class="b" ${cred&&cred.active?"":"disabled"} onclick="dnsEnable()">${esc(t("conn.dns.reconfigure"))}</button><span id="dmsg"></span></div>
+      ${rej.length? esc(t("conn.dns.rejected",{list:rej.map(([ip,n])=>ip+" ("+n+"×)").join(", ")})) : esc(t("conn.dns.check_port",{port:d.port}))}
+      ${d.raw_sample&&d.raw_sample.length? '<div class="sub">'+esc(t("conn.dns.last_lines"))+': '+d.raw_sample.map(esc).join(" ⏎ ")+'</div>':""}</div>`;
+  } else if(d.unparsed>0 && d.unparsed>d.queries/10){
+    h=`<div class="banner">${esc(t("conn.dns.unparsed",{n:d.unparsed}))} ${d.raw_sample.map(esc).join(" ⏎ ")}</div>`;
+  }
+  return h;
+}
+function credForm(){
+  if(cred&&cred.active) return `<span class="ok">✓ ${esc(cred.user)}</span>`;
+  return `<input id="cu" value="admin" style="width:90px"><input id="cp" type="password" placeholder="${esc(t("common.mikrotik_password"))}" style="width:170px">
+    <button class="b" onclick="saveCred()">${esc(t("common.verify"))}</button>`;
+}
+async function saveCred(){
+  const r=await fetch("/api/updates/credentials",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({username:$("#cu").value,password:$("#cp").value})});
+  const j=await r.json(); if(!r.ok){ $("#dmsg").innerHTML='<span class="err"> '+esc(j.detail)+'</span>'; return; }
+  cred=j.credentials; render();
+}
+async function dnsEnable(){
+  const r=await fetch("/api/connections/dns-enable",{method:"POST"}); const j=await r.json();
+  $("#dmsg").innerHTML = r.ok? '<span class="ok"> '+esc(t("conn.dns.enabled",{target:j.target}))+'</span>' : '<span class="err"> '+esc(j.detail)+'</span>';
+  setTimeout(load,1500);
+}
+
+// active clients: stable order and fixed size, removed from the list only after 2 min of inactivity
+const chipMem=new Map();
+let chipOrder="name", chipRank=[], chipRankAt=0, optKeys="";
+function renderChips(){
+  const now_=Date.now()/1000;
+  for(const c of D.clients||[]){
+    const prev=chipMem.get(c.key);
+    const rate=(c.down_bps||0)+(c.up_bps||0);
+    chipMem.set(c.key,{...c, seen:now_, ema: prev? prev.ema*0.7+rate*0.3 : rate});
+  }
+  for(const [k,v] of chipMem){
+    if(now_-v.seen>120) chipMem.delete(k);
+    else if(v.seen<now_-1){ v.conns=0; v.down_bps=0; v.up_bps=0; v.ema*=0.7; }
+  }
+  const all=[...chipMem.values()];
+  let keys;
+  if(chipOrder==="name") keys=all.sort((a,b)=>a.client.localeCompare(b.client,I18N.locale)).map(c=>c.key);
+  else{
+    // by traffic, but re-rank at most every 30 s (smoothed rate)
+    if(now_-chipRankAt>30 || all.some(c=>!chipRank.includes(c.key))){
+      chipRank=all.sort((a,b)=>b.ema-a.ema).map(c=>c.key); chipRankAt=now_;
+    }
+    keys=chipRank.filter(k=>chipMem.has(k));
+  }
+  const box=$("#chips");
+  if(!keys.length){ box.innerHTML=`<span class="dim">${esc(t("conn.no_active"))}</span>`; return; }
+  const empty=box.querySelector(":scope > span.dim"); if(empty) empty.remove();
+  const maxL=Math.log10(1+Math.max(1,...all.map(c=>c.ema)));
+  const els=new Map([...box.querySelectorAll(".chip")].map(e=>[e.dataset.k,e]));
+  for(const [k,e] of els) if(!chipMem.has(k)) { e.remove(); els.delete(k); }
+  keys.forEach((k,i)=>{
+    const c=chipMem.get(k);
+    let e=els.get(k);
+    if(!e){
+      e=document.createElement("div"); e.className="chip"; e.dataset.k=k;
+      e.innerHTML=`<div class="bg"></div><span class="name"></span><span class="r"><b class="c"></b> ${esc(t("conn.conn_abbr"))} · ↓<b class="d"></b> ↑<b class="u"></b></span>`;
+    }
+    e.classList.toggle("on", selected===k);
+    e.classList.toggle("idle", !c.conns);
+    e.querySelector(".name").textContent=c.client;
+    e.querySelector(".name").title=c.client+(c.ip&&c.ip!==c.client? " · "+c.ip:"");
+    e.querySelector(".c").textContent=c.conns||"–";
+    e.querySelector(".d").textContent=fmtR(c.down_bps);
+    e.querySelector(".u").textContent=fmtR(c.up_bps);
+    e.querySelector(".bg").style.width=(maxL? Math.log10(1+c.ema)/maxL*100 : 0)+"%";
+    if(box.children[i]!==e) box.insertBefore(e, box.children[i]||null);
+  });
+  // client picker: rebuild only when the list changes (otherwise an open select would close)
+  const opts=new Map(all.map(c=>[c.key,c.client]));
+  if(selected && !opts.has(selected)) opts.set(selected, selected);
+  const sig=[...opts.keys()].sort().join("|")+"#"+selected;
+  if(sig!==optKeys){
+    optKeys=sig;
+    $("#fclient").innerHTML=`<option value="">${esc(t("conn.all_clients"))}</option>`+[...opts].sort((a,b)=>a[1].localeCompare(b[1],I18N.locale)).map(([k,n])=>`<option value="${esc(k)}" ${k===selected?"selected":""}>${esc(n)}</option>`).join("");
+  }
+}
+document.querySelectorAll("#chipsort button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("#chipsort button").forEach(x=>x.classList.toggle("on",x===b));
+  chipOrder=b.dataset.o; chipRankAt=0; if(D) renderChips();
+}));
+function sortVal(c){
+  if(sortKey==="dur") return (c.closed_at||now())-c.first_seen;
+  if(sortKey==="up") return c.up; if(sortKey==="down") return c.down;
+  return (c.down_bps||0)+(c.up_bps||0);
+}
+function connRow(c, withClient=true){
+  const dur=(c.closed_at||now())-c.first_seen;
+  const st = c.closed_at? t("conn.closed_ago",{v:fmtD(now()-c.closed_at)}) : (c.tcp_state || (c.seen_reply? t("conn.state_active"):t("conn.state_no_reply")));
+  return `<tr class="${c.closed_at?"closed":""}">
+    ${withClient? `<td><span class="name">${esc(c.client)}</span><div class="sub">${esc(c.src)}${c.sport? ":"+c.sport:""}</div></td>`:""}
+    <td>${esc(c.dst_name||c.dst)}${c.dst_local?'<span class="tag">LAN</span>':""}<div class="sub">${c.dst_name? esc(c.dst):""}</div></td>
+    <td>${esc(c.proto)}${c.dport? "/"+c.dport:""}<div class="sub">${esc(c.service||"")}</div></td>
+    <td class="sub">${esc(st)}${c.fasttrack?`<span class="tag ft" title="${esc(t("conn.ft_title"))}">FT</span>`:""}</td>
+    <td class="n">${c.first_seen_approx?"≥ ":""}${fmtD(dur)}</td>
+    <td class="n">${fmtB(c.up)}</td><td class="n">${fmtB(c.down)}</td>
+    <td class="n">${c.closed_at? "–" : fmtR(c.down_bps)+" / "+fmtR(c.up_bps)}</td></tr>`;
+}
+function renderConns(){
+  const cs=[...D.conns].sort((a,b)=>(!!a.closed_at-!!b.closed_at)||(sortVal(b)-sortVal(a)));
+  $("#cnt").textContent=t("conn.shown",{n:D.shown});
+  $("#conns").innerHTML=cs.map(c=>connRow(c)).join("") || `<tr><td colspan="8" class="dim">${esc(t("common.nothing"))}</td></tr>`;
+}
+
+async function loadDetail(){
+  if(!selected){ $("#detail").innerHTML=""; detail=null; return; }
+  try{ detail=await (await fetch("/api/connections/client/"+encodeURIComponent(selected))).json(); }catch(e){ return; }
+  const c=detail.client||{};
+  const maxT=Math.max(1,...detail.conn_top.map(x=>x.up+x.down));
+  $("#detail").innerHTML=`<h2>${esc(c.hostname||c.comment||selected)} <span class="dim" style="letter-spacing:0;text-transform:none">${esc(detail.ips.join(", "))}${c.mac? " · "+esc(c.mac):""}${c.vendor? " · "+esc(c.vendor):""}</span>
+      <button class="b" onclick="selectClient('')">✕ ${esc(t("common.close"))}</button></h2>
+    <div class="cols">
+      <div class="panel"><h3>${esc(t("conn.d.dns_recent",{n:detail.dns_recent.length}))}</h3><div class="scroll"><table>
+        <thead><tr><th>${esc(t("conn.d.time"))}</th><th>${esc(t("conn.d.query"))}</th><th>${esc(t("conn.d.type"))}</th></tr></thead><tbody>
+        ${detail.dns_recent.map(q=>`<tr><td class="sub">${tm(q.ts)}</td><td>${esc(q.name)}${q.count>1?' <span class="tag">'+q.count+'×</span>':""}</td><td class="sub">${esc(q.type)}</td></tr>`).join("")
+          || `<tr><td colspan="3" class="dim">${esc(D.dns_router&&D.dns_router.configured? t("conn.d.none_doh") : t("conn.d.dns_off"))}</td></tr>`}
+        </tbody></table></div></div>
+      <div class="panel"><h3>${esc(t("conn.d.top_domains",{h:detail.hours}))}</h3><div class="scroll"><table>
+        <thead><tr><th>${esc(t("conn.d.domain"))}</th><th class="n">${esc(t("conn.d.queries"))}</th><th>${esc(t("conn.d.last"))}</th></tr></thead><tbody>
+        ${detail.dns_top.map(q=>`<tr><td>${esc(q.name)} <span class="sub">${esc(q.types||"")}</span></td><td class="n">${q.count}</td><td class="sub">${tm(q.last)}</td></tr>`).join("")
+          || `<tr><td colspan="3" class="dim">${esc(t("common.no_data"))}</td></tr>`}
+        </tbody></table></div></div>
+      <div class="panel"><h3>${esc(t("conn.d.top_data",{h:detail.hours}))}</h3><div class="scroll"><table>
+        <thead><tr><th>${esc(t("conn.col.dest"))}</th><th>${esc(t("conn.col.port_service"))}</th><th class="n">↓ / ↑</th><th class="n" title="${esc(t("conn.d.new_conns_title"))}">${esc(t("conn.d.new_conns"))}</th></tr></thead><tbody>
+        ${detail.conn_top.map(x=>`<tr><td><span class="bar" style="width:${Math.max(2,(x.up+x.down)/maxT*60)}px"></span>${esc(x.dst)}</td>
+          <td class="sub">${esc(x.proto)}/${x.port||"–"} ${esc(x.service||"")}</td><td class="n">${fmtB(x.down)} / ${fmtB(x.up)}</td><td class="n">${x.conns||"–"}</td></tr>`).join("")
+          || `<tr><td colspan="4" class="dim">${esc(t("common.no_data_yet"))}</td></tr>`}
+        </tbody></table></div></div>
+      <div class="panel"><h3>${esc(t("conn.d.client_conns",{n:detail.conns.length}))}</h3><div class="scroll"><table>
+        <thead><tr><th>${esc(t("conn.col.dest"))}</th><th>port</th><th>${esc(t("conn.col.state"))}</th><th class="n">${esc(t("conn.col.duration"))}</th><th class="n">↑</th><th class="n">↓</th><th class="n">${esc(t("conn.d.rate"))}</th></tr></thead>
+        <tbody>${detail.conns.map(x=>connRow(x,false)).join("") || `<tr><td colspan="7" class="dim">${esc(t("common.none"))}</td></tr>`}</tbody></table></div></div>
+    </div>`;
+}
+async function loadOverview(){
+  if(selected){ $("#overview").innerHTML=""; return; }
+  let o; try{ o=await (await fetch("/api/connections/top?hours=24")).json(); }catch(e){ return; }
+  const mx=Math.max(1,...o.clients.map(c=>c.up+c.down)), md=Math.max(1,...o.destinations.map(c=>c.up+c.down));
+  $("#overview").innerHTML=`<h2>${esc(t("conn.o.last24"))}</h2><div class="cols">
+    <div class="panel"><h3>${esc(t("conn.o.clients_by_data"))}</h3><table><thead><tr><th>${esc(t("conn.col.client"))}</th><th class="n">${esc(t("conn.col.received"))}</th><th class="n">${esc(t("conn.col.sent"))}</th><th class="n">${esc(t("conn.o.conns"))}</th><th class="n">${esc(t("conn.o.dests"))}</th></tr></thead><tbody>
+      ${o.clients.map(c=>`<tr class="cl" data-k="${esc(c.mac)}"><td><span class="bar" style="width:${Math.max(2,(c.up+c.down)/mx*60)}px"></span><span class="name">${esc(c.client)}</span> <span class="sub">${esc(c.ip||"")}</span></td>
+        <td class="n">${fmtB(c.down)}</td><td class="n">${fmtB(c.up)}</td><td class="n">${c.conns||"–"}</td><td class="n">${c.destinations}</td></tr>`).join("") || `<tr><td colspan="5" class="dim">${esc(t("common.no_data_yet"))}</td></tr>`}
+    </tbody></table></div>
+    <div class="panel"><h3>${esc(t("conn.o.dests_by_data"))}</h3><table><thead><tr><th>${esc(t("conn.col.dest"))}</th><th>${esc(t("conn.col.port_service"))}</th><th class="n">↓ / ↑</th></tr></thead><tbody>
+      ${o.destinations.map(d=>`<tr><td><span class="bar" style="width:${Math.max(2,(d.up+d.down)/md*60)}px"></span>${esc(d.dst)}</td><td class="sub">${esc(d.proto)}/${d.port||"–"} ${esc(d.service||"")}</td>
+        <td class="n">${fmtB(d.down)} / ${fmtB(d.up)}</td></tr>`).join("") || `<tr><td colspan="3" class="dim">${esc(t("common.no_data_yet"))}</td></tr>`}
+    </tbody></table></div></div>
+    <div class="note">${esc(t("conn.o.note"))}</div>`;
+}
+function selectClient(k){
+  selected=k; $("#fclient").value=k;
+  history.replaceState(null,"", k? "?client="+encodeURIComponent(k) : location.pathname);
+  load(); loadDetail(); loadOverview();
+}
+
+function render(){
+  $("#status").innerHTML=statusHtml();
+  const keep=document.activeElement && document.activeElement.id==="cp";
+  if(!keep) $("#dnsbanner").innerHTML=dnsBanner();
+  renderChips(); renderConns();
+}
+async function load(){
+  if($("#fpause").checked) return;
+  const p=new URLSearchParams({client:selected, q:$("#fq").value, closed:$("#fclosed").checked?1:0, local:$("#flocal").checked?1:0});
+  try{
+    const r=await fetch("/api/connections?"+p);
+    if(r.status===401){ location.href="/login"; return; }
+    D=await r.json(); skew=D.now-Date.now()/1000;
+    if(cred===null){ try{ cred=(await (await fetch("/api/updates/state")).json()).credentials; }catch(e){ cred={active:false}; } }
+    render();
+    $("#meta").textContent=t("common.updated_at",{time:new Date().toLocaleTimeString(I18N.locale)});
+  }catch(e){ $("#meta").innerHTML='<span class="err">'+esc(t("common.backend_down"))+'</span>'; }
+}
+document.addEventListener("click",e=>{
+  const ch=e.target.closest(".chip[data-k], tr.cl[data-k]"); if(ch){ selectClient(selected===ch.dataset.k? "" : ch.dataset.k); return; }
+  const th=e.target.closest("th.s"); if(th){ sortKey=th.dataset.s; document.querySelectorAll("th.s").forEach(x=>x.classList.toggle("on",x===th)); if(D) renderConns(); }
+});
+$("#fclient").addEventListener("change",e=>selectClient(e.target.value));
+let qt; $("#fq").addEventListener("input",()=>{ clearTimeout(qt); qt=setTimeout(load,300); });
+$("#fclosed").addEventListener("change",load); $("#flocal").addEventListener("change",load);
+I18N.ready.then(()=>{
+  load(); loadDetail(); loadOverview();
+  setInterval(loadLoad,60000);
+  setInterval(load,5000); setInterval(()=>{ if(!$("#fpause").checked){ loadDetail(); } },10000); setInterval(loadOverview,60000);
+});
+</script>
+</body>
+</html>

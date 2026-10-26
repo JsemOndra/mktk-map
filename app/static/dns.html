@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="title.dns">mktk-map</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#111823; --panel2:#0e141d; --line:#1e2a3a;
+    --txt:#c9d6e3; --dim:#5f7288; --mono:'JetBrains Mono','Cascadia Code','Fira Code',ui-monospace,Consolas,monospace;
+    --ok:#3ddc84; --warn:#ffb020; --err:#ff5d5d; --wifi:#4db8ff; --s1:#3a8ce0; --s2:#d9762f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:13px}
+  header.top{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  header.top h1{font-size:15px;margin:0;letter-spacing:2px;font-weight:600}
+  header.top h1 b{color:var(--ok)} header.top h1 span{color:var(--dim);font-weight:400}
+  .hbtn{border:1px solid var(--line);color:var(--dim);text-decoration:none;background:none;font-family:inherit;
+    font-size:12px;padding:5px 10px;border-radius:4px;cursor:pointer}
+  .hbtn:hover{color:var(--txt);border-color:var(--dim)}
+  #meta{color:var(--dim);font-size:11px;margin-left:auto}
+  main{padding:20px;max-width:1500px;margin:0 auto}
+  h2{font-size:11px;letter-spacing:3px;color:var(--dim);text-transform:uppercase;margin:24px 0 10px;display:flex;gap:12px;align-items:center}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+  .dim{color:var(--dim)} .ok{color:var(--ok)} .warn{color:var(--warn)} .err{color:var(--err)}
+  input{background:var(--panel2);border:1px solid var(--line);color:var(--txt);font-family:inherit;
+    font-size:12px;padding:5px 8px;border-radius:4px;outline:none}
+  input:focus{border-color:var(--wifi)}
+  label.ck{color:var(--dim);font-size:11px;display:flex;gap:5px;align-items:center}
+  input[type=checkbox]{accent-color:var(--ok)}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+  .seg button{background:none;border:none;color:var(--dim);font-family:inherit;font-size:11px;padding:5px 10px;cursor:pointer}
+  .seg button.on{background:var(--panel2);color:var(--txt)}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-top:12px}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 14px}
+  .tile .v{font-size:22px;font-weight:700} .tile .l{color:var(--dim);font-size:10.5px;letter-spacing:1px;text-transform:uppercase}
+  .cols{display:grid;grid-template-columns:340px 1fr;gap:12px}
+  @media (max-width:1000px){ .cols{grid-template-columns:1fr} }
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{color:var(--dim);font-size:10px;letter-spacing:1px;text-transform:uppercase;text-align:left;
+    padding:6px 8px;border-bottom:1px solid var(--line);font-weight:400;white-space:nowrap}
+  td{padding:5px 8px;border-bottom:1px solid var(--panel2);vertical-align:top}
+  td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  tr.cl{cursor:pointer} tr.cl:hover td{background:var(--panel2)} tr.sel td{background:#13233a}
+  tr.dom{cursor:pointer} tr.dom:hover td{background:var(--panel2)}
+  tr.exp td{background:var(--bg)}
+  .name{font-weight:700} .sub{color:var(--dim);font-size:10.5px}
+  .tag{display:inline-block;font-size:9.5px;padding:0 5px;border-radius:3px;background:#1a2330;color:var(--dim);margin-left:4px;vertical-align:1px}
+  .tag.new{background:#12331f;color:var(--ok)}
+  .bar{display:inline-block;height:5px;border-radius:3px;background:var(--s1);vertical-align:middle;margin-right:6px}
+  .who{font-size:11px} .who span{margin-right:10px}
+  a{color:var(--wifi)}
+  .note{font-size:11px;color:var(--dim);margin-top:8px;line-height:1.5}
+  .chgrid{stroke:var(--line);stroke-width:1} .chax{fill:var(--dim);font-size:9px;font-family:var(--mono)}
+  .chdown{fill:var(--err);opacity:.13} .chx{stroke:var(--dim);stroke-width:1;stroke-dasharray:2 2}
+  .chdot{stroke:var(--panel);stroke-width:2}
+  .chtip{position:absolute;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:5px 8px;font-size:11px;pointer-events:none;white-space:nowrap;z-index:5}
+  .chtip i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  .chtt{color:var(--dim);margin-bottom:2px} .chempty{color:var(--dim);font-size:11px;padding:20px 0}
+</style>
+<link rel="icon" href="/static/logo.svg" type="image/svg+xml">
+<script src="/static/i18n.js"></script>
+</head>
+<body>
+<header class="top">
+  <img src="/static/logo.svg" width="64" height="64" alt="">
+  <h1>MKTK<b>·</b>MAP <span>/ <span data-i18n="dns.title"></span></span></h1>
+  <a class="hbtn" href="/" data-i18n="nav.back"></a>
+  <a class="hbtn" href="/connections" data-i18n="nav.connections"></a>
+  <span id="meta" data-i18n="common.loading"></span>
+</header>
+<main>
+  <div class="panel"><div class="row">
+    <span class="seg" id="range">
+      <button data-h="1">1 h</button><button data-h="24" class="on">24 h</button><button data-h="168" data-i18n="common.7d"></button>
+      <button data-h="720" data-i18n="common.30d"></button><button data-h="2160" data-i18n="common.90d"></button></span>
+    <input id="q" data-i18n-placeholder="dns.search" style="width:280px">
+    <label class="ck"><input type="checkbox" id="grp"> <span data-i18n="dns.group"></span></label>
+    <span class="dim" id="src" style="font-size:11px;margin-left:auto"></span>
+  </div></div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <h2 data-i18n="dns.timeline_h"></h2>
+  <div class="panel"><div id="tl"></div></div>
+
+  <div class="cols" style="margin-top:12px">
+    <div class="panel">
+      <h2 style="margin-top:0" data-i18n="dns.clients_h"></h2>
+      <table><thead><tr><th data-i18n="dns.col.client"></th><th class="n" data-i18n="dns.col.queries"></th><th class="n" data-i18n="dns.col.domains"></th></tr></thead><tbody id="clients"></tbody></table>
+      <div class="note" data-i18n="dns.clients_note"></div>
+    </div>
+    <div class="panel">
+      <h2 style="margin-top:0"><span data-i18n="dns.domains_h"></span> <span class="dim" id="dcnt" style="letter-spacing:0;text-transform:none"></span></h2>
+      <div style="overflow-x:auto"><table><thead><tr><th data-i18n="dns.col.domain"></th><th class="n" data-i18n="dns.col.queries"></th><th class="n" data-i18n="dns.col.clients"></th><th data-i18n="dns.col.who"></th><th data-i18n="dns.col.types"></th><th data-i18n="dns.col.last"></th></tr></thead>
+        <tbody id="domains"></tbody></table></div>
+      <div class="note" id="dnote"></div>
+    </div>
+  </div>
+</main>
+<script src="/static/charts.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+function esc(s){return (s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+const fmtN=n=>n>=1e6?(n/1e6).toFixed(1)+" M":n>=1e4?(n/1e3).toFixed(0)+" k":n>=1e3?(n/1e3).toFixed(1)+" k":String(n);
+const ago=ts=>{ if(!ts) return "–"; const s=Date.now()/1000-ts; if(s<5) return t("common.just_now"); if(s<60) return t("common.ago",{v:Math.round(s)+" s"}); if(s<3600) return t("common.ago",{v:Math.round(s/60)+" min"});
+  if(s<86400) return t("common.ago",{v:Math.round(s/3600)+" h"}); return new Date(ts*1000).toLocaleDateString(I18N.locale); };
+let hours=24, D=null, selClient=null, open=new Set();
+
+async function load(){
+  const p=new URLSearchParams({hours, q:$("#q").value, group:$("#grp").checked?1:0, limit:600});
+  try{
+    const r=await fetch("/api/dns?"+p); if(r.status===401){ location.href="/login"; return; }
+    D=await r.json(); render();
+    $("#meta").textContent=t("common.updated_at",{time:new Date().toLocaleTimeString(I18N.locale)});
+  }catch(e){ $("#meta").innerHTML='<span class="err">'+esc(t("common.backend_down"))+'</span>'; }
+}
+function render(){
+  $("#src").textContent = (D.source==="daily"? t("dns.from_daily") : t("dns.from_hourly"))+" · "+tn("dns.since_start",D.dns.queries);
+  $("#dnote").innerHTML = t("dns.domains_note",{hourly:D.retention.stats_hourly_days,daily:D.retention.dns_daily_days});
+  const newCnt=D.domains.filter(d=>d.first_seen && Date.now()/1000-d.first_seen<86400).length;
+  $("#tiles").innerHTML=[[t("dns.tile.queries"),fmtN(D.total)],[t("dns.tile.domains"),fmtN(D.ndomains)],[t("dns.tile.clients"),D.nclients],[t("dns.tile.new"),newCnt]]
+    .map(([l,v])=>`<div class="tile"><div class="v">${v}</div><div class="l">${esc(l)}</div></div>`).join("");
+  // timeline
+  const tl=D.timeline||[];
+  if(tl.length){
+    const now=Date.now()/1000, rng=Math.min(hours,168)*3600;
+    tsChart($("#tl"),{series:[{name:t("dns.series"),color:"var(--s1)",pts:tl.map(([h,c])=>[h+1800,c])}],
+      range:[now-rng, now], unit:"/h", fmt:v=>fmtN(Math.round(v)), gap:5400, height:110});
+  } else $("#tl").innerHTML='<div class="chempty">'+esc(D.source==="daily"? t("dns.timeline_7d") : t("common.no_data_yet"))+'</div>';
+  // clients
+  const mx=Math.max(1,...D.top_clients.map(c=>c.count));
+  $("#clients").innerHTML=D.top_clients.map(c=>`<tr class="cl ${selClient===c.key?"sel":""}" data-k="${esc(c.key)}">
+    <td><span class="bar" style="width:${Math.max(2,c.count/mx*50)}px"></span><span class="name">${esc(c.client)}</span><div class="sub">${esc(c.ip||"")}</div></td>
+    <td class="n">${fmtN(c.count)}</td><td class="n">${c.domains}</td></tr>`).join("") || `<tr><td colspan="3" class="dim">${esc(t("common.no_data"))}</td></tr>`;
+  renderDomains();
+}
+function renderDomains(){
+  let ds=D.domains;
+  if(selClient) ds=ds.filter(d=>d.clients.some(c=>c.key===selClient))
+    .map(d=>({...d, mine:(d.clients.find(c=>c.key===selClient)||{}).count||0})).sort((a,b)=>b.mine-a.mine);
+  const mx=Math.max(1,...ds.map(d=>selClient? d.mine : d.count));
+  const selName=selClient? (D.top_clients.find(c=>c.key===selClient)||{}).client : null;
+  $("#dcnt").innerHTML=esc(t("dns.n_of",{n:ds.length,total:D.ndomains}))+(selName? ` · ${esc(t("dns.only"))} <b>${esc(selName)}</b> <a href="#" id="clr">${esc(t("common.cancel"))}</a>`:"")+
+    (D.shown<D.ndomains? " · "+esc(t("dns.shown_top",{n:D.shown})):"");
+  $("#domains").innerHTML=ds.map(d=>{
+    const cnt=selClient? d.mine : d.count;
+    const isNew=d.first_seen && Date.now()/1000-d.first_seen<86400;
+    const who=d.clients.slice(0,3).map(c=>`<span>${esc(c.client)} <span class="dim">×${fmtN(c.count)}</span></span>`).join("")+(d.clients.length>3? `<span class="dim">+${d.clients.length-3}</span>`:"");
+    const row=`<tr class="dom" data-n="${esc(d.name)}">
+      <td><span class="bar" style="width:${Math.max(2,cnt/mx*60)}px"></span><span class="name">${esc(d.name)}</span>${isNew?'<span class="tag new" title="'+esc(t("dns.first_at",{time:new Date(d.first_seen*1000).toLocaleString(I18N.locale)}))+'">'+esc(t("dns.new"))+'</span>':""}${d.subdomains>1?'<span class="tag">'+esc(tn("dns.subdomains",d.subdomains))+'</span>':""}</td>
+      <td class="n">${fmtN(cnt)}${selClient? ' <span class="sub">/ '+fmtN(d.count)+'</span>':""}</td><td class="n">${d.nclients}</td>
+      <td class="who">${who}</td><td class="sub">${esc(d.types.join(", "))}</td><td class="sub">${esc(ago(d.last))}</td></tr>`;
+    if(!open.has(d.name)) return row;
+    return row+`<tr class="exp"><td colspan="6"><table><tbody>${d.clients.map(c=>`<tr><td><a href="/connections?client=${encodeURIComponent(c.key)}">${esc(c.client)}</a> <span class="sub">${esc(c.ip||"")}</span></td><td class="n">${fmtN(c.count)}×</td></tr>`).join("")}</tbody></table>
+      ${d.first_seen? '<div class="sub" style="margin-top:4px">'+esc(t("dns.first_seen",{time:new Date(d.first_seen*1000).toLocaleString(I18N.locale)}))+'</div>':""}</td></tr>`;
+  }).join("") || `<tr><td colspan="6" class="dim">${esc(t("common.nothing"))}</td></tr>`;
+}
+document.addEventListener("click",e=>{
+  if(e.target.id==="clr"){ e.preventDefault(); selClient=null; render(); return; }
+  const c=e.target.closest("tr.cl"); if(c){ selClient= selClient===c.dataset.k? null : c.dataset.k; render(); return; }
+  const d=e.target.closest("tr.dom"); if(d && !e.target.closest("a")){ const n=d.dataset.n; open.has(n)? open.delete(n) : open.add(n); renderDomains(); }
+});
+document.querySelectorAll("#range button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("#range button").forEach(x=>x.classList.toggle("on",x===b)); hours=+b.dataset.h; load(); }));
+let qt; $("#q").addEventListener("input",()=>{ clearTimeout(qt); qt=setTimeout(load,350); });
+$("#grp").addEventListener("change",()=>{ open.clear(); load(); });
+window.addEventListener("resize",()=>{ if(D) render(); });
+I18N.ready.then(()=>{ load(); setInterval(load,30000); });
+</script>
+</body>
+</html>

@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="title.wifi">mktk-map</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#111823; --panel2:#0e141d; --line:#1e2a3a;
+    --txt:#c9d6e3; --dim:#5f7288; --mono:'JetBrains Mono','Cascadia Code','Fira Code',ui-monospace,Consolas,monospace;
+    --ok:#3ddc84; --warn:#ffb020; --err:#ff5d5d; --wifi:#4db8ff; --s1:#3a8ce0; --s2:#d9762f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:13px}
+  header.top{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  header.top h1{font-size:15px;margin:0;letter-spacing:2px;font-weight:600}
+  header.top h1 b{color:var(--ok)} header.top h1 span{color:var(--dim);font-weight:400}
+  .hbtn{border:1px solid var(--line);color:var(--dim);text-decoration:none;background:none;font-family:inherit;
+    font-size:12px;padding:5px 10px;border-radius:4px;cursor:pointer}
+  .hbtn:hover{color:var(--txt);border-color:var(--dim)}
+  #meta{color:var(--dim);font-size:11px;margin-left:auto}
+  main{padding:20px;max-width:1300px;margin:0 auto}
+  h2{font-size:11px;letter-spacing:3px;color:var(--dim);text-transform:uppercase;margin:26px 0 10px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px}
+  .dim{color:var(--dim)} .ok{color:var(--ok)} .warn{color:var(--warn)} .err{color:var(--err)}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{color:var(--dim);font-size:10px;letter-spacing:1px;text-transform:uppercase;text-align:left;
+    padding:6px 8px;border-bottom:1px solid var(--line);font-weight:400;white-space:nowrap}
+  td{padding:7px 8px;border-bottom:1px solid var(--panel2);vertical-align:top}
+  td.n{text-align:right;font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:none}
+  .tblwrap{overflow-x:auto}
+  .name{font-weight:700}
+  .sub{color:var(--dim);font-size:10.5px}
+  .note{font-size:11px;color:var(--dim);margin-top:8px;line-height:1.5}
+  .pill{display:inline-block;padding:1px 7px;border-radius:3px;font-size:10.5px;font-weight:700}
+  .pill.ok{background:#12331f;color:var(--ok)} .pill.warn{background:#3a2a08;color:var(--warn)}
+  .pill.err{background:#3a1212;color:var(--err)} .pill.dim{background:#1a2330;color:var(--dim)}
+  #spec svg{display:block;width:100%}
+  .sp-ax{fill:var(--dim);font-size:9px;font-family:var(--mono)}
+  .sp-lbl{fill:var(--txt);font-size:10px;font-family:var(--mono)}
+  .sp-grid{stroke:var(--line);stroke-width:1}
+  .zb{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .zb span{font-size:11px;padding:2px 7px;border-radius:3px;border:1px solid var(--line)}
+  .zb .free{color:var(--ok);border-color:#1d4a2e} .zb .near{color:var(--warn);border-color:#4a3a10}
+  .zb .overlap{color:var(--err);border-color:#4a1d1d} .zb .used{font-weight:700;outline:1px solid var(--txt)}
+</style>
+<link rel="icon" href="/static/logo.svg" type="image/svg+xml">
+<script src="/static/i18n.js"></script>
+</head>
+<body>
+<header class="top">
+  <img src="/static/logo.svg" width="64" height="64" alt="">
+  <h1>MKTK<b>·</b>MAP <span>/ Wi-Fi</span></h1>
+  <a class="hbtn" href="/" data-i18n="nav.back"></a>
+  <span id="meta" data-i18n="common.loading"></span>
+</header>
+<main>
+  <h2 data-i18n="wifi.radios_h"></h2>
+  <div class="panel"><div class="tblwrap"><table>
+    <thead><tr><th>AP</th><th data-i18n="wifi.col.band"></th><th data-i18n="wifi.col.channel"></th><th data-i18n="wifi.col.width"></th><th data-i18n="wifi.col.power"></th><th>SSID</th>
+      <th data-i18n="wifi.col.clients"></th><th data-i18n="wifi.col.signal"></th><th data-i18n="wifi.col.noise"></th><th>SNR ø</th><th data-i18n="wifi.col.state"></th></tr></thead>
+    <tbody id="radios"></tbody></table></div>
+    <div class="note" data-i18n="wifi.radios_note"></div>
+  </div>
+
+  <h2 data-i18n="wifi.spectrum_h"></h2>
+  <div class="panel">
+    <div id="spec"></div>
+    <div id="zbtxt" style="margin-top:10px"></div>
+    <div class="zb" id="zb"></div>
+    <div class="note" data-i18n="wifi.spectrum_note"></div>
+  </div>
+
+  <h2 data-i18n="wifi.weak_h"></h2>
+  <div class="panel"><div class="tblwrap"><table>
+    <thead><tr><th data-i18n="wifi.col.client"></th><th>AP</th><th>SSID</th><th data-i18n="wifi.col.signal1"></th><th>tx / rx rate</th></tr></thead>
+    <tbody id="weak"></tbody></table></div>
+    <div class="note" id="weaknote"></div>
+  </div>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+function esc(s){return (s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+const sigCls=v=>v==null?"":v>-67?"ok":v>-75?"warn":"err";
+const snrCls=v=>v==null?"":v>=25?"ok":v>=15?"warn":"err";
+let W=null;
+
+function renderRadios(){
+  $("#radios").innerHTML = W.radios.length? W.radios.map(r=>{
+    const st=String(r.state||"");
+    const stc = /running/i.test(st)? "ok" : (r.inactive||/disabled|search|cac|radar|dfs/i.test(st))? "warn" : "dim";
+    return `<tr>
+      <td><span class="name">${esc(r.device||"?")}</span><div class="sub">${esc(r.interface)}${r.controller? " · CAPsMAN "+esc(r.controller):""}</div></td>
+      <td>${esc(r.band? r.band+" GHz":"–")}</td>
+      <td>${r.wifi_channel? "<b>"+r.wifi_channel+"</b> ":""}<span class="sub">${r.freq? r.freq+" MHz":esc(r.raw||"–")}</span></td>
+      <td class="n">${r.width? r.width+" MHz":"–"}</td>
+      <td class="n">${r.txpower!=null? r.txpower+" dBm":"–"}</td>
+      <td>${esc((r.ssids||[]).join(", "))||"–"}</td>
+      <td class="n">${r.clients}${r.weak? ` <span class="warn" title="${esc(t("wifi.weak_title"))}">(${r.weak}⚠)</span>`:""}</td>
+      <td class="n"><span class="${sigCls(r.signal_avg)}">${r.signal_avg??"–"}</span> / <span class="${sigCls(r.signal_min)}">${r.signal_min??"–"}</span></td>
+      <td class="n">${r.noise_floor!=null? r.noise_floor+" dBm":"–"}</td>
+      <td class="n"><span class="${snrCls(r.snr_avg)}">${r.snr_avg!=null? r.snr_avg+" dB":"–"}</span></td>
+      <td><span class="pill ${stc}">${esc(st||"?")}</span></td></tr>`;
+  }).join("") : `<tr><td colspan="11" class="dim">${esc(t("wifi.no_radios"))}</td></tr>`;
+}
+
+function renderSpectrum(){
+  const r24=W.radios.filter(r=>r.band==="2.4" && r.span);
+  const z=W.ieee802154||{thread:[],zigbee:[]};
+  const el=$("#spec"), Wd=Math.max(300, el.clientWidth||900);
+  const L=Wd<600? 76 : 110, R=10, rowH=20, top=6, rows=Math.max(1,r24.length), zbY=top+rows*rowH+14, H=zbY+34;
+  const [f0,f1]=[2398,2486];
+  const X=f=>L+(f-f0)/(f1-f0)*(Wd-L-R);
+  let h="";
+  for(let f=2400; f<=2480; f+=10) h+=`<line x1="${X(f)}" x2="${X(f)}" y1="${top}" y2="${zbY-6}" class="sp-grid"/>`;
+  r24.forEach((r,i)=>{
+    const y=top+i*rowH, [a,b]=r.span;
+    h+=`<text x="${L-8}" y="${y+13}" text-anchor="end" class="sp-lbl">${esc(r.device||"?")}</text>`+
+       `<rect x="${X(a)}" y="${y+3}" width="${X(b)-X(a)}" height="${rowH-6}" rx="3" fill="var(--s1)" opacity=".55"/>`+
+       `<text x="${(X(a)+X(b))/2}" y="${y+13}" text-anchor="middle" class="sp-lbl">${esc(t("wifi.channel_n",{n:r.wifi_channel??"?"}))} · ${r.width} MHz</text>`;
+  });
+  if(!r24.length) h+=`<text x="${L}" y="${top+13}" class="sp-ax">${esc(t("wifi.no_24"))}</text>`;
+  for(const c of W.zb_channels){
+    const x=X(c.center), used=c.used_by.length;
+    const col = c.status==="overlap"? "var(--err)" : c.status==="near"? "var(--warn)" : "var(--ok)";
+    if(used) h+=`<line x1="${x}" x2="${x}" y1="${top}" y2="${zbY}" stroke="var(--s2)" stroke-width="2" stroke-dasharray="3 2"/>`;
+    h+=`<rect x="${x-3}" y="${zbY}" width="6" height="8" rx="1" fill="${col}"/>`+
+       `<text x="${x}" y="${zbY+20}" text-anchor="middle" class="sp-ax"${used?' style="fill:var(--txt);font-weight:700"':""}>${c.channel}</text>`;
+  }
+  h+=`<text x="${L-8}" y="${zbY+8}" text-anchor="end" class="sp-lbl">802.15.4</text>`;
+  for(let f=2400; f<=2480; f+=20) h+=`<text x="${X(f)}" y="${H-1}" text-anchor="middle" class="sp-ax">${f}</text>`;
+  el.innerHTML=`<svg viewBox="0 0 ${Wd} ${H}" height="${H}">${h}</svg>`;
+
+  const used=[...z.thread.map(c=>["Thread",c]), ...z.zigbee.map(c=>["Zigbee",c])];
+  let tx;
+  if(!used.length) tx=`<span class="dim">${esc(t("wifi.zb_unset"))}</span>`;
+  else tx=used.map(([k,c])=>{
+    const zc=W.zb_channels.find(x=>x.channel===c)||{};
+    return zc.status==="overlap"? `<div class="err">✗ ${esc(t("wifi.zb_overlap",{kind:k,ch:c,list:zc.overlap.join(", ")}))}</div>`
+      : zc.status==="near"? `<div class="warn">⚠ ${esc(t("wifi.zb_near",{kind:k,ch:c,list:zc.near.join(", ")}))}</div>`
+      : `<div class="ok">✓ ${esc(t("wifi.zb_ok",{kind:k,ch:c}))}</div>`;
+  }).join("");
+  tx+=`<div class="dim" style="margin-top:4px">${esc(t("wifi.zb_free"))}: <b class="ok">${W.zb_free.join(", ")||esc(t("common.none"))}</b></div>`;
+  $("#zbtxt").innerHTML=tx;
+  $("#zb").innerHTML=W.zb_channels.map(c=>`<span class="${c.status}${c.used_by.length?" used":""}" title="${c.center} MHz${c.used_by.length?" · "+c.used_by.join("+"):""}">${c.channel}</span>`).join("");
+}
+
+function renderWeak(){
+  $("#weak").innerHTML = W.weak_clients.length? W.weak_clients.map(c=>`<tr>
+    <td><span class="name">${esc(c.hostname||c.mac)}</span><div class="sub">${esc(c.ip||"")} · ${esc(c.mac)}${c.vendor? " · "+esc(c.vendor):""}</div></td>
+    <td>${esc(c.device||"?")}</td><td>${esc(c.ssid||"")}</td>
+    <td class="n"><span class="${sigCls(c.signal)}">${c.signal} dBm</span></td>
+    <td class="sub">${esc(c.tx_rate||"–")} / ${esc(c.rx_rate||"–")}</td></tr>`).join("")
+    : `<tr><td colspan="5" class="ok">${esc(t("wifi.no_weak",{dbm:W.weak_dbm}))} ✓</td></tr>`;
+  $("#weaknote").textContent = t("wifi.weak_note",{dbm:W.weak_dbm});
+}
+
+async function load(){
+  try{
+    const r=await fetch("/api/wifi");
+    if(r.status===401){ location.href="/login"; return; }
+    W=await r.json();
+    renderRadios(); renderSpectrum(); renderWeak();
+    $("#meta").textContent = W.updated_at? t("wifi.data_from",{time:new Date(W.updated_at*1000).toLocaleTimeString(I18N.locale)}) : t("common.waiting_poll");
+  }catch(e){ $("#meta").textContent=t("common.backend_down"); }
+}
+window.addEventListener("resize",()=>{ if(W) renderSpectrum(); });
+I18N.ready.then(()=>{ load(); setInterval(load, 15000); });
+</script>
+</body>
+</html>

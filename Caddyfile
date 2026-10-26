@@ -1,0 +1,25 @@
+# HTTPS for mktk-map — certificate from Caddy's own local CA (tls internal).
+# Root CA to import into the OS / browser trust store:
+#   docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt ./mktk-root.crt
+{
+	skip_install_trust
+	# browsers send no SNI for an IP address and in Docker Caddy does not see MKTK_HOST
+	# as its own address -> without this it finds no certificate (ERR_SSL_PROTOCOL_ERROR)
+	default_sni {$MKTK_HOST}
+	auto_https disable_redirects
+}
+
+https://{$MKTK_HOST}:8443 {
+	tls internal
+	encode gzip
+	reverse_proxy mktk-map:8080 {
+		# the app uses this to know the request came via HTTPS
+		# (any value sent by the client is overwritten)
+		header_up X-Mktk-Proxy {$PROXY_SECRET}
+	}
+	header {
+		X-Frame-Options DENY
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+	}
+}
