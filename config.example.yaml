@@ -1,0 +1,32 @@
+# Source of DHCP leases (device name below)
+dhcp_source: router
+
+devices:
+- name: router
+  host: 192.168.88.1         # change to the real IP
+  role: router
+    # trunk/uplink ports that must not be treated as "client" ports
+    # (otherwise everything flowing over the trunk shows up on them)
+  ignore_interfaces: []        # e.g. [sfp-sfpplus1, ether24]
+
+- name: cap-ap1
+  host: 192.168.88.2
+  role: ap
+
+- name: cap-ap2
+  host: 192.168.88.3
+  role: ap
+webhook:
+  url: http://homeassistant.local:8123/api/webhook/mktk-map
+  notify_new: true
+  notify_gone: false
+  notify_back: false
+  notify_roaming: false
+  gone_after_min: 10
+
+# GET endpoints an API token may read; a trailing "/" is a prefix. Default when omitted:
+#api_token_paths:
+#  - /api/snapshot
+#  - /api/presence/
+#  - /api/alerts
+#  - /api/events

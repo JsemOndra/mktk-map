@@ -1,0 +1,806 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="title.index">mktk-map</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#111823; --panel2:#0e141d; --line:#1e2a3a;
+    --txt:#c9d6e3; --dim:#5f7288; --mono:'JetBrains Mono','Cascadia Code','Fira Code',ui-monospace,Consolas,monospace;
+    --ok:#3ddc84; --warn:#ffb020; --err:#ff5d5d; --wifi:#4db8ff; --eth:#b08cff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:13px}
+  header.top{display:flex;flex-wrap:wrap;align-items:center;gap:8px 8px;padding:14px 20px;border-bottom:1px solid var(--line)}
+  header.top h1{font-size:15px;margin:0 8px 0 0;letter-spacing:2px;font-weight:600}
+  header.top h1 b{color:var(--ok)}
+  #meta{color:var(--dim);font-size:11px}
+  #search{margin-left:auto;background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+    font-family:inherit;font-size:12px;padding:6px 10px;border-radius:4px;width:170px;min-width:120px;outline:none}
+  #search:focus{border-color:var(--wifi)}
+  main{padding:20px;max-width:1500px;margin:0 auto}
+  h2{font-size:11px;letter-spacing:3px;color:var(--dim);text-transform:uppercase;margin:26px 0 10px;
+    display:flex;align-items:center;gap:14px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+  .seg button{background:none;border:none;color:var(--dim);font-family:inherit;font-size:10px;
+    letter-spacing:1px;padding:4px 10px;cursor:pointer;text-transform:uppercase}
+  .seg button.on{background:var(--panel);color:var(--txt)}
+
+  /* fleet */
+  #fleet{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+  .dev{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+  .dev .top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .led{width:9px;height:9px;border-radius:50%;flex:none}
+  .led.ok{background:var(--ok);box-shadow:0 0 6px var(--ok)}
+  .led.err{background:var(--err);box-shadow:0 0 6px var(--err)}
+  .dev .name{font-weight:700;font-size:14px}
+  .dev .model{color:var(--dim);font-size:11px;margin-left:auto;text-align:right}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:11.5px}
+  .kv span:nth-child(odd){color:var(--dim)}
+  .bar{height:5px;background:var(--panel2);border-radius:3px;overflow:hidden;margin-top:2px}
+  .bar i{display:block;height:100%;background:var(--ok)}
+  .bar i.hot{background:var(--warn)}
+  .badge{display:inline-block;padding:1px 7px;border-radius:3px;font-size:10.5px;font-weight:700;text-decoration:none}
+  .badge.uptodate{background:#12331f;color:var(--ok)}
+  .badge.newver{background:#3a2a08;color:var(--warn)}
+  .badge.unknown{background:#1a2330;color:var(--dim)}
+  a.badge.newver:hover{text-decoration:underline}
+  .devbtns{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap}
+  .devbtns button{background:none;border:1px solid var(--line);color:var(--dim);
+    font-family:inherit;font-size:10.5px;padding:3px 9px;border-radius:4px;cursor:pointer}
+  .devbtns button:hover{color:var(--txt);border-color:var(--dim)}
+  .devbtns button.danger{border-color:#4a2a10;color:var(--warn)}
+  .devbtns button.danger:hover{border-color:var(--warn)}
+  .dev .err-msg{color:var(--err);font-size:11px;word-break:break-all}
+  .dev .warn-msg{color:var(--warn);font-size:10.5px;margin-top:6px;word-break:break-all}
+
+  /* map */
+  #map{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+  .col{background:var(--panel);border:1px solid var(--line);border-radius:6px}
+  .col>header{padding:9px 12px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center}
+  .col>header .cnt{margin-left:auto;color:var(--dim);font-size:11px}
+  .client{display:grid;grid-template-columns:14px 1fr auto;gap:2px 8px;padding:8px 12px;
+    border-bottom:1px solid var(--panel2);cursor:pointer}
+  .client:hover{background:var(--panel2)}
+  .client:last-child{border-bottom:none}
+  .cico{align-self:start;padding-top:1px;font-size:12px}
+  .cico.wifi{color:var(--wifi)} .cico.eth{color:var(--eth)} .cico.lease{color:var(--dim)}
+  .cname{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .cname .vnd{color:var(--dim);font-weight:400;font-style:italic}
+  .cip{color:var(--wifi);text-align:right;white-space:nowrap}
+  .cip.dyn{color:var(--err)}
+  .ccmt{grid-column:2/4;color:var(--warn);font-size:11px;opacity:.85}
+  .csub{grid-column:2/4;color:var(--dim);font-size:10.5px;display:flex;gap:10px;flex-wrap:wrap}
+  .sig{color:var(--ok)} .sig.mid{color:var(--warn)} .sig.bad{color:var(--err)}
+  .cdet{grid-column:1/4;display:none;margin-top:6px;padding:8px 10px;background:var(--bg);
+    border:1px solid var(--line);border-radius:4px;font-size:11px;cursor:default}
+  .client.open .cdet{display:block}
+  .cdet .grid{display:grid;grid-template-columns:auto 1fr;gap:2px 14px}
+  .cdet .grid span:nth-child(odd){color:var(--dim);white-space:nowrap}
+  .cdet .grid span:nth-child(even){word-break:break-all}
+  .cdet h4{margin:10px 0 4px;font-size:10px;letter-spacing:2px;color:var(--dim);text-transform:uppercase}
+  .cdet svg{display:block;background:var(--panel2);border-radius:3px}
+  .roam{color:var(--dim);font-size:10.5px}
+  .roam b{color:var(--txt);font-weight:600}
+
+  /* events */
+  #events{background:var(--panel);border:1px solid var(--line);border-radius:6px;max-height:260px;overflow:auto}
+  .ev{display:flex;gap:12px;padding:6px 12px;border-bottom:1px solid var(--panel2);font-size:11.5px}
+  .ev:last-child{border-bottom:none}
+  .ev .t{color:var(--dim);flex:none;width:110px}
+  .ev .ty{flex:none;width:80px;font-weight:700}
+  .ev .ty.new_client{color:var(--ok)} .ev .ty.client_gone{color:var(--err)}
+  .ev .ty.client_back{color:var(--wifi)} .ev .ty.roaming{color:var(--eth)}
+  .hide{display:none}
+  #alerts{background:var(--panel);border:1px solid var(--line);border-radius:6px;max-height:260px;overflow:auto}
+  .al{display:flex;gap:12px;padding:6px 12px;border-bottom:1px solid var(--panel2);font-size:11.5px;align-items:baseline}
+  .al:last-child{border-bottom:none}
+  .al .t{color:var(--dim);flex:none;width:110px}
+  .al .s{flex:none;width:76px;font-weight:700;font-size:10.5px}
+  .al .s.critical{color:var(--err)} .al .s.warning{color:var(--warn)} .al .s.info{color:var(--wifi)} .al .s.resolved{color:var(--ok)}
+  .al .m{color:var(--dim)}
+  .al.active{background:#1d1410}
+  .al .nosend{color:var(--dim);font-size:10px}
+
+  /* settings */
+  #gear{margin-left:0;background:none;border:1px solid var(--line);color:var(--dim);
+    font-family:inherit;font-size:12px;padding:5px 10px;border-radius:4px;cursor:pointer}
+  #gear:hover{color:var(--txt);border-color:var(--dim)}
+  .gearlink,#gear{white-space:nowrap}
+  .gearlink{margin-left:0;border:1px solid var(--line);color:var(--dim);text-decoration:none;
+    font-size:12px;padding:5px 10px;border-radius:4px}
+  .gearlink:hover{color:var(--txt);border-color:var(--dim)}
+  .gearlink.has{border-color:#4a2a10;color:var(--warn)}
+  #updcnt b{margin-left:6px}
+  #settings{display:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;
+    padding:16px;margin-top:16px}
+  #settings.show{display:block}
+  #settings h3{margin:0 0 10px;font-size:11px;letter-spacing:2px;color:var(--dim);text-transform:uppercase}
+  #settings h3:not(:first-child){margin-top:20px}
+  .frm{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .frm label{color:var(--dim);font-size:11px;display:flex;align-items:center;gap:5px}
+  .frm input[type=text],.frm input[type=number],.frm select{background:var(--panel2);
+    border:1px solid var(--line);color:var(--txt);font-family:inherit;font-size:12px;
+    padding:5px 8px;border-radius:4px;outline:none}
+  .frm input[type=text]:focus{border-color:var(--wifi)}
+  .frm input[type=checkbox]{accent-color:var(--ok)}
+  .frm button{background:none;border:1px solid var(--line);color:var(--txt);font-family:inherit;
+    font-size:11px;padding:5px 12px;border-radius:4px;cursor:pointer}
+  .frm button:hover{border-color:var(--dim)}
+  .frm button.primary{border-color:var(--ok);color:var(--ok)}
+  #devtbl{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}
+  #devtbl th{color:var(--dim);font-size:10px;letter-spacing:1px;text-transform:uppercase;
+    text-align:left;padding:4px 8px;border-bottom:1px solid var(--line)}
+  #devtbl td{padding:5px 8px;border-bottom:1px solid var(--panel2)}
+  #devtbl td button{background:none;border:1px solid var(--line);color:var(--dim);
+    font-family:inherit;font-size:10.5px;padding:2px 8px;border-radius:4px;cursor:pointer;margin-right:4px}
+  #devtbl td button:hover{color:var(--txt)}
+  #devtbl td button.del:hover{color:var(--err);border-color:var(--err)}
+  .msg{font-size:11px;margin-left:8px}
+  .msg.ok{color:var(--ok)} .msg.err{color:var(--err)}
+  :root{--s1:#3a8ce0;--s2:#d9762f}
+  /* device history */
+  #devhist{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;margin-top:12px}
+  #devhist .hh{display:flex;gap:12px;align-items:center;margin-bottom:8px}
+  #devhist .hh b{font-size:14px}
+  #devhist .hh .x{margin-left:auto;background:none;border:1px solid var(--line);color:var(--dim);
+    font-family:inherit;border-radius:4px;cursor:pointer;padding:2px 9px}
+  #hcharts{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:10px 18px}
+  #hcharts h4{margin:0 0 2px;font-size:10px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;font-weight:400}
+  @media (max-width:520px){ #hcharts{grid-template-columns:1fr} }
+  .chgrid{stroke:var(--line);stroke-width:1}
+  .chax{fill:var(--dim);font-size:9px;font-family:var(--mono)}
+  .chdown{fill:var(--err);opacity:.13}
+  .chx{stroke:var(--dim);stroke-width:1;stroke-dasharray:2 2}
+  .chdot{stroke:var(--panel);stroke-width:2}
+  .chtip{position:absolute;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:5px 8px;
+    font-size:11px;pointer-events:none;white-space:nowrap;z-index:5}
+  .chtip i,.chlegend i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  .chtt{color:var(--dim);margin-bottom:2px} .chdn{color:var(--err)}
+  .chlegend{display:flex;gap:14px;font-size:10.5px;color:var(--dim);margin-bottom:2px}
+  .chempty{color:var(--dim);font-size:11px;padding:20px 0}
+#ver{position:fixed;right:8px;bottom:5px;font-size:10px;color:var(--dim);opacity:.55;font-family:monospace;pointer-events:none;display:flex;align-items:center;gap:5px}
+#pulse{width:6px;height:6px;border-radius:50%;background:var(--ok);opacity:0;transition:opacity .25s}
+#pulse.on{opacity:1}
+</style>
+<link rel="icon" href="/static/logo.svg" type="image/svg+xml">
+<script src="/static/i18n.js"></script>
+</head>
+<body>
+<header class="top">
+  <img src="/static/logo.svg" width="64" height="64" alt="">
+  <h1>MKTK<b>·</b>MAP</h1>
+  <span id="meta" data-i18n="common.loading"></span>
+  <input id="search" data-i18n-placeholder="idx.search" autocomplete="off">
+  <a class="gearlink" href="/topology" data-i18n="nav.topology"></a>
+  <a class="gearlink" href="/connections" data-i18n="nav.connections"></a>
+  <a class="gearlink" href="/dns">DNS</a>
+  <a class="gearlink" href="/backups" data-i18n="nav.backups"></a>
+  <a class="gearlink" href="/wifi">📶 Wi-Fi</a>
+  <a class="gearlink" href="/iot" data-i18n-title="nav.iot_title">IoT</a>
+  <a id="updlink" class="gearlink" href="/updates"><span data-i18n="nav.updates"></span><span id="updcnt"></span></a>
+  <button id="gear" onclick="toggleSettings()" data-i18n="idx.settings"></button>
+  <button id="gear" onclick="logout()" data-i18n="common.logout"></button>
+</header>
+<main>
+  <div id="settings">
+    <h3 data-i18n="idx.lang.h"></h3>
+    <div class="frm">
+      <select id="lang" onchange="saveLanguage()"></select>
+      <span class="msg" id="lang_msg"></span>
+    </div>
+
+    <h3 data-i18n="idx.dev.h"></h3>
+    <table id="devtbl">
+      <thead><tr><th data-i18n="idx.dev.name"></th><th data-i18n="idx.dev.host"></th><th data-i18n="idx.dev.role"></th><th data-i18n="idx.dev.ignore"></th><th></th></tr></thead>
+      <tbody id="devrows"></tbody>
+    </table>
+    <div class="frm" style="margin-top:10px">
+      <input type="text" id="d_name" data-i18n-placeholder="idx.dev.name" style="width:130px">
+      <input type="text" id="d_host" data-i18n-placeholder="idx.dev.host_ph" style="width:130px">
+      <select id="d_role"><option>ap</option><option>switch</option><option>router</option></select>
+      <input type="text" id="d_ign" data-i18n-placeholder="idx.dev.ignore_ph" style="width:180px">
+      <input type="text" id="d_upl" data-i18n-placeholder="idx.dev.uplink_ph" style="width:130px" data-i18n-title="idx.dev.uplink_title">
+      <button onclick="testDevice()" data-i18n="idx.dev.test"></button>
+      <button class="primary" id="d_save" onclick="saveDevice()" data-i18n="common.add"></button>
+      <button id="d_cancel" class="hide" onclick="resetDevForm()" data-i18n="common.cancel"></button>
+      <span class="msg" id="d_msg"></span>
+    </div>
+    <div class="frm" style="margin-top:10px" id="syncrow"></div>
+    <div class="frm" style="margin-top:10px">
+      <label><span data-i18n="idx.dev.dhcp_source"></span>
+        <select id="dhcp_src" onchange="saveDhcpSource()"></select></label>
+      <span class="msg" id="dhcp_msg"></span>
+    </div>
+
+    <h3 data-i18n="idx.tok.h"></h3>
+    <table id="devtbl">
+      <thead><tr><th data-i18n="idx.tok.label"></th><th data-i18n="idx.tok.created"></th><th data-i18n="idx.tok.last_used"></th><th></th></tr></thead>
+      <tbody id="tokrows"></tbody>
+    </table>
+    <div class="frm" style="margin-top:10px">
+      <input type="text" id="t_label" data-i18n-placeholder="idx.tok.label_ph" style="width:220px">
+      <button class="primary" onclick="createToken()" data-i18n="idx.tok.create"></button>
+      <span class="msg" id="t_msg"></span>
+    </div>
+    <div id="t_new" class="hide" style="margin-top:8px;padding:8px 10px;background:var(--bg);
+      border:1px solid var(--warn);border-radius:4px;font-size:11px;word-break:break-all">
+      <span style="color:var(--warn)" data-i18n="idx.tok.save_now"></span><br>
+      <b id="t_val"></b><br>
+      <span style="color:var(--dim)" data-i18n-html="idx.tok.usage"></span>
+    </div>
+
+    <h3 data-i18n="idx.zb.h"></h3>
+    <div class="frm">
+      <label><span data-i18n="idx.zb.thread"></span> <input type="text" id="z_thread" data-i18n-placeholder="idx.zb.thread_ph" style="width:90px"></label>
+      <label><span data-i18n="idx.zb.zigbee"></span> <input type="text" id="z_zigbee" data-i18n-placeholder="idx.zb.zigbee_ph" style="width:90px"></label>
+      <button class="primary" onclick="saveIeee()" data-i18n="common.save"></button>
+      <span class="msg" id="z_msg"></span>
+    </div>
+
+    <h3 data-i18n="idx.al.h"></h3>
+    <div class="frm" id="alcfg"></div>
+    <div class="frm" style="margin-top:8px">
+      <label><span data-i18n="idx.al.offline"></span> <input type="number" id="a_off" min="1" style="width:50px"> min</label>
+      <label>CPU ≥ <input type="number" id="a_cpu" min="1" style="width:50px"> %</label>
+      <label><span data-i18n="idx.al.temp"></span> <input type="number" id="a_temp" min="1" style="width:50px"> °C</label>
+      <label><span data-i18n="idx.al.radio"></span> <input type="number" id="a_radio" min="1" style="width:50px"> min</label>
+      <label><span data-i18n="idx.al.iot"></span> <input type="number" id="a_iot" min="1" style="width:50px"> <span data-i18n="common.days"></span></label>
+      <button class="primary" onclick="saveAlerts()" data-i18n="common.save"></button>
+      <button onclick="testAlert()" data-i18n="common.send_test"></button>
+      <span class="msg" id="a_msg"></span>
+    </div>
+    <div style="color:var(--dim);font-size:10.5px;margin-top:6px;line-height:1.5" data-i18n-html="idx.al.ha_hint"></div>
+
+    <h3 data-i18n="idx.wh.h"></h3>
+    <div class="frm">
+      <input type="text" id="w_url" placeholder="http://homeassistant.local:8123/api/webhook/mktk-map" style="width:340px">
+      <label><input type="checkbox" id="w_new"> <span data-i18n="idx.wh.new"></span></label>
+      <label><input type="checkbox" id="w_gone"> <span data-i18n="idx.wh.gone"></span></label>
+      <label><input type="checkbox" id="w_back"> <span data-i18n="idx.wh.back"></span></label>
+      <label><input type="checkbox" id="w_roam"> <span data-i18n="idx.wh.roaming"></span></label>
+      <label><span data-i18n="idx.wh.gone_after"></span> <input type="number" id="w_min" min="1" style="width:55px"> min</label>
+      <button class="primary" onclick="saveWebhook()" data-i18n="common.save"></button>
+      <button onclick="testWebhook()" data-i18n="common.send_test"></button>
+      <span class="msg" id="w_msg"></span>
+    </div>
+  </div>
+
+  <h2 data-i18n="idx.devices"></h2>
+  <div id="fleet"></div>
+  <div id="devhist" class="hide">
+    <div class="hh"><b id="hname"></b>
+      <span class="seg"><button data-h="24" class="on">24 h</button><button data-h="168" data-i18n="common.7d"></button></span>
+      <span class="dim" id="hmeta" style="font-size:11px;color:var(--dim)"></span>
+      <button class="x" onclick="closeHist()">✕</button></div>
+    <div id="hcharts"></div>
+  </div>
+
+  <h2><span data-i18n="idx.map"></span>
+    <span class="seg">
+      <button id="byDev" class="on" onclick="setView('dev')" data-i18n="idx.by_device"></button>
+      <button id="byVlan" onclick="setView('vlan')" data-i18n="idx.by_vlan"></button>
+    </span>
+  </h2>
+  <div id="map"></div>
+
+  <h2><span data-i18n="idx.alerts"></span> <span id="alcnt" style="letter-spacing:0;text-transform:none"></span></h2>
+  <div id="alerts"></div>
+
+  <h2 data-i18n="idx.events"></h2>
+  <div id="events"></div>
+</main>
+<div id="ver"><span id="pulse"></span><span id="vertxt"></span></div>
+<script src="/static/charts.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+/* a 500 from FastAPI is plain text — r.json() would throw and the error would be lost */
+async function jsonOf(r){ try{ return await r.json(); }catch(e){ return {detail:t("common.server_error",{status:r.status})}; } }
+let snap=null, view="dev";
+const openClients=new Set();
+
+function fmtBytes(b){if(b==null)return"–";const u=["B","KiB","MiB","GiB"];let i=0;while(b>=1024&&i<3){b/=1024;i++}return b.toFixed(1)+" "+u[i]}
+function esc(s){return (s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function sigCls(s){if(s==null)return"";const v=parseInt(s);return v>=-65?"":(v>=-75?"mid":"bad")}
+function fmtTs(t){return t? new Date(t*1000).toLocaleString(I18N.locale):null}
+function fmtDataBytes(b){
+  if(!b) return null;
+  const p=(""+b).split(",").map(Number);
+  if(p.length!==2||p.some(isNaN)) return ""+b;
+  return `↑${fmtBytes(p[0])} ↓${fmtBytes(p[1])}`;
+}
+
+/* ---------- fleet ---------- */
+function renderFleet(){
+  $("#fleet").innerHTML = snap.devices.map(d=>{
+    if(!d.reachable) return `<div class="dev">
+      <div class="top"><span class="led err"></span><span class="name">${esc(d.name)}</span>
+      <span class="model">${esc(d.host)}</span></div>
+      <div class="err-msg">${esc(t("idx.unreachable",{error:d.error||"?"}))}</div>
+      ${d.error_kind==="tls_pin"? `<div class="devbtns"><button class="danger" data-trust-host="${esc(d.host)}" data-trust-name="${esc(d.name)}">${esc(t("idx.trust_cert"))}</button></div>`:""}</div>`;
+    const r=d.resource||{}, rb=d.routerboard||{}, u=d.update||{};
+    const memUsed = r.total_memory? (1-r.free_memory/r.total_memory)*100 : 0;
+    const hddUsed = r.total_hdd? (1-r.free_hdd/r.total_hdd)*100 : 0;
+    const cpu = parseInt(r.cpu_load||0);
+    const lt=d.latest||{};
+    let updBadge=`<span class="badge unknown" title="${esc(t("idx.upd_unknown_title"))}">update: ?</span>`;
+    if(lt.version) updBadge = d.update_available
+      ? `<a class="badge newver" href="/updates" title="${esc(t("idx.upd_new_title",{version:lt.version,channel:lt.channel}))}">→ ${esc(lt.version)}</a>`
+      : `<span class="badge uptodate" title="${esc(t("idx.upd_latest_title",{version:lt.version,channel:lt.channel}))}">${esc(t("common.up_to_date"))}</span>`;
+    const fwB = d.fw_available? ` <a class="badge newver" href="/updates" title="${esc(t("idx.fw_title"))}">fw → ${esc(rb.upgrade_firmware)}</a>`:"";
+    return `<div class="dev">
+      <div class="top"><span class="led ok"></span><span class="name">${esc(d.identity||d.name)}</span>
+        <span class="model">${esc(rb.model||r.board||"")}<br>${esc(d.host)}</span></div>
+      <div class="kv">
+        <span>uptime</span><span>${esc(r.uptime||"–")}</span>
+        <span>RouterOS</span><span>${esc(r.version||"–")} ${updBadge}${fwB}</span>
+        <span>CPU ${cpu}%</span><span><div class="bar"><i class="${cpu>70?"hot":""}" style="width:${cpu}%"></i></div></span>
+        <span>RAM ${memUsed.toFixed(0)}%</span><span><div class="bar"><i class="${memUsed>80?"hot":""}" style="width:${memUsed}%"></i></div>
+          <small style="color:var(--dim)">${esc(t("idx.free",{v:fmtBytes(r.free_memory)}))}</small></span>
+        <span>${esc(t("idx.disk"))} ${hddUsed.toFixed(0)}%</span><span><div class="bar"><i class="${hddUsed>85?"hot":""}" style="width:${hddUsed}%"></i></div>
+          <small style="color:var(--dim)">${esc(t("idx.free",{v:fmtBytes(r.free_hdd)+" / "+fmtBytes(r.total_hdd)}))}</small></span>
+        <span>${esc(t("idx.clients"))}</span><span>${d.client_count}</span>
+        <span>api-ssl</span><span>${d.conn&&d.conn.connected_since? esc(t("idx.connected_since",{ago:fmtAgo(d.conn.connected_since)})) : "–"}</span>
+      </div>
+      <div class="devbtns"><button data-hist="${esc(d.name)}">${esc(t("idx.history"))} ↗</button></div>
+      ${(d.warnings||[]).length? `<div class="warn-msg" title="${esc(d.warnings.join("\n"))}">⚠ ${esc(t("idx.missing_perms",{paths:d.warnings.map(w=>w.split(":")[0]).join(", ")}))}</div>`:""}
+
+    </div>`;
+  }).join("");
+}
+
+/* ---------- client rows ---------- */
+function detailGrid(c){
+  const rows=[
+    ["hostname", c.hostname],[t("idx.c.comment"), c.comment],["IP", c.ip],["MAC", c.mac],
+    ["IPv6", (c.ipv6||[]).join(", ")],
+    [t("idx.c.vendor"), c.vendor],[t("idx.c.device"), c.device],["interface", c.interface],
+    ["SSID", c.ssid],
+    [t("idx.c.last_ssid"), !c.ssid && c.last_ssid ? c.last_ssid : null],
+    ["VLAN", c.vid],
+    [t("idx.c.signal"), c.signal!=null? c.signal+" dBm":null],
+    ["tx / rx rate", c.tx_rate||c.rx_rate? `${c.tx_rate||"?"} / ${c.rx_rate||"?"}`:null],
+    [t("idx.c.transferred"), fmtDataBytes(c.bytes)],
+    [t("idx.c.connected"), c.link_uptime],
+    [t("idx.c.first_seen"), fmtTs(c.first_seen)],
+    ["lease", c.lease_status? c.lease_status+(c.lease_static?" ("+t("idx.c.static")+")":""):null],
+    ["lease server", c.lease_server],[t("idx.c.last_seen_dhcp"), c.lease_last_seen],
+    [t("idx.c.lease_expires"), c.lease_expires],
+  ];
+  return '<div class="grid">'+rows.filter(([,v])=>v!=null&&v!=="")
+    .map(([k,v])=>`<span>${esc(k)}</span><span>${esc(v)}</span>`).join("")+'</div>';
+}
+
+function sparkline(pts, w=280, h=42, cls=""){
+  if(pts.length<2) return `<span class="roam">${esc(t("idx.c.few_data"))}</span>`;
+  const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+  const x0=Math.min(...xs), x1=Math.max(...xs);
+  let y0=Math.min(...ys), y1=Math.max(...ys);
+  if(y0===y1){y0-=1;y1+=1}
+  const X=t=>2+(t-x0)/(x1-x0)*(w-4), Y=v=>h-3-(v-y0)/(y1-y0)*(h-6);
+  const d=pts.map((p,i)=>(i?"L":"M")+X(p[0]).toFixed(1)+","+Y(p[1]).toFixed(1)).join("");
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    <path d="${d}" fill="none" stroke="var(--wifi)" stroke-width="1.5"/>
+    <text x="3" y="10" fill="var(--dim)" font-size="8">${y1.toFixed(0)}</text>
+    <text x="3" y="${h-3}" fill="var(--dim)" font-size="8">${y0.toFixed(0)}</text></svg>`;
+}
+
+const extCache=new Map();  // mac -> {html, ts} — history survives a re-render
+
+async function loadDetail(mac, el, quiet){
+  const box=el.querySelector(".ext");
+  const cached=extCache.get(mac);
+  if(!quiet && !cached) box.innerHTML=`<span class="roam">${esc(t("idx.c.loading_history"))}</span>`;
+  try{
+    const r=await fetch(`/api/clients/${encodeURIComponent(mac)}/detail?hours=24`);
+    const d=await r.json();
+    let html=`<div style="margin-top:6px"><a href="/connections?client=${encodeURIComponent(mac)}" style="color:var(--wifi);font-size:11px">${esc(t("idx.c.conn_link"))} ↗</a></div>`;
+    const sig=d.samples.filter(s=>s.signal!=null).map(s=>[s.ts,s.signal]);
+    if(sig.length){ html+=`<h4>${esc(t("idx.c.signal_24h"))}</h4>${sparkline(sig)}`; }
+    // traffic rate from cumulative bytes (skip resets)
+    const rate=[];
+    for(let i=1;i<d.samples.length;i++){
+      const a=d.samples[i-1], b=d.samples[i];
+      if(a.tx==null||b.tx==null) continue;
+      const dt=b.ts-a.ts, db=(b.tx-a.tx)+(b.rx-a.rx);
+      if(dt>0 && db>=0 && dt<600) rate.push([b.ts, db/dt/1024]); // KiB/s
+    }
+    if(rate.length>1){ html+=`<h4>${esc(t("idx.c.traffic_24h"))}</h4>${sparkline(rate)}`; }
+    if(d.roaming.length){
+      html+=`<h4>Roaming</h4>`+d.roaming.map(r=>
+        `<div class="roam">${fmtTs(r.ts)} · <b>${esc(r.from)}</b> → <b>${esc(r.to)}</b></div>`).join("");
+    }
+    extCache.set(mac,{html:html||`<span class="roam">${esc(t("idx.c.no_history"))}</span>`,ts:Date.now()});
+    // the element may have been re-rendered by a refresh meanwhile -> find the current one
+    const live=[...document.querySelectorAll(".client[data-mac]")]
+      .find(x=>x.dataset.mac===mac);
+    ((live||el).querySelector(".ext")||box).innerHTML=extCache.get(mac).html;
+  }catch(e){ if(!cached) box.innerHTML=`<span class="roam">${esc(t("idx.c.history_unavailable"))}</span>`; }
+}
+
+function clientRow(c){
+  const ico=c.conn==="wifi"?"◉":(c.conn==="eth"?"▣":"◌");
+  const icls=c.conn==="wifi"?"wifi":(c.conn==="eth"?"eth":"lease");
+  const sub=[];
+  if(c.ssid) sub.push(esc(c.ssid));
+  else if(c.last_ssid) sub.push(`<span style="color:var(--dim)" title="${esc(t("idx.c.last_ssid"))}">◉ ${esc(c.last_ssid)}</span>`);
+  if(c.interface) sub.push(esc(c.interface));
+  if(c.vid) sub.push("vlan "+esc(c.vid));
+  if(c.signal!=null) sub.push(`<span class="sig ${sigCls(c.signal)}">${esc(c.signal)} dBm</span>`);
+  sub.push(esc(c.mac));
+  const nm = c.hostname || (c.vendor? `<span class="vnd">${esc(c.vendor)}</span>` : esc(t("idx.c.no_hostname")));
+  const cmt = c.comment? `<span class="ccmt">${esc(c.comment)}</span>`:"";
+  const hay=`${c.hostname||""} ${c.ip||""} ${(c.ipv6||[]).join(" ")} ${c.mac} ${c.comment||""} ${c.ssid||""} ${c.last_ssid||""} ${c.vendor||""}`.toLowerCase();
+  const open=openClients.has(c.mac);
+  return `<div class="client ${open?"open":""}" data-hay="${esc(hay)}" data-mac="${esc(c.mac)}" onclick="toggleClient(event,this)">
+    <span class="cico ${icls}">${ico}</span>
+    <span class="cname" title="${esc(c.hostname||c.vendor||"")}">${c.hostname?esc(c.hostname):nm}</span>
+    <span class="cip${c.lease_static===false?" dyn":""}">${esc(c.ip||"")}</span>
+    ${cmt}
+    <span class="csub">${sub.join(" · ")}</span>
+    <div class="cdet" onclick="event.stopPropagation()">${detailGrid(c)}<div class="ext">${(extCache.get(c.mac)||{}).html||""}</div></div></div>`;
+}
+
+function toggleClient(ev,el){
+  const mac=el.dataset.mac;
+  el.classList.toggle("open");
+  if(el.classList.contains("open")){ openClients.add(mac); loadDetail(mac, el); }
+  else openClients.delete(mac);
+}
+
+/* ---------- map ---------- */
+function setView(v){
+  view=v;
+  $("#byDev").classList.toggle("on",v==="dev");
+  $("#byVlan").classList.toggle("on",v==="vlan");
+  renderMap();
+}
+
+function renderMap(){
+  const cols=[];
+  if(view==="dev"){
+    const groups={};
+    for(const c of snap.clients){ const k=c.device||"__lease__"; (groups[k]=groups[k]||[]).push(c); }
+    for(const d of snap.devices){
+      const cl=groups[d.name]||[];
+      if(!cl.length && !d.reachable) continue;
+      cols.push(col(`<span class="led ${d.reachable?"ok":"err"}"></span><b>${esc(d.identity||d.name)}</b>`, cl));
+    }
+    if(groups.__lease__) cols.push(col(`<span class="led"></span><b>${esc(t("idx.lease_only"))}</b>`, groups.__lease__));
+  }else{
+    const groups={};
+    for(const c of snap.clients){
+      const k=c.vid!=null? "VLAN "+c.vid : (c.conn==="lease-only"?t("idx.lease_only"):t("idx.no_vlan"));
+      (groups[k]=groups[k]||[]).push(c);
+    }
+    for(const k of Object.keys(groups).sort()){
+      cols.push(col(`<b>${esc(k)}</b>`, groups[k]));
+    }
+  }
+  $("#map").innerHTML=cols.join("");
+  applyFilter();
+  // open details: history is filled from the cache (in clientRow) and, when
+  // older than 30 s, silently refreshed in the background
+  document.querySelectorAll(".client.open[data-mac]").forEach(el=>{
+    const mac=el.dataset.mac, c=extCache.get(mac);
+    if(!c || Date.now()-c.ts>30000) loadDetail(mac, el, true);
+  });
+}
+function col(hdr, cl){
+  return `<div class="col"><header>${hdr}<span class="cnt">${cl.length}</span></header>
+    ${cl.map(clientRow).join("")||`<div class="client"><span></span><span class="cname" style="color:var(--dim)">${esc(t("idx.no_clients"))}</span></div>`}</div>`;
+}
+
+/* ---------- events ---------- */
+function renderEvents(){
+  const evs=snap.events||[];
+  $("#events").innerHTML = evs.length? evs.map(e=>{
+    let what = e.hostname||e.vendor||e.mac;
+    let extra = e.type==="roaming"? `${esc(e.from)} → ${esc(e.to)}` : (e.device? "@ "+esc(e.device):"");
+    if(e.ssid) extra += " · "+esc(e.ssid);
+    if(e.vlan!=null && e.vlan!=="") extra += " · vlan "+esc(e.vlan);
+    return `<div class="ev"><span class="t">${fmtTs(e.ts)}</span>
+      <span class="ty ${esc(e.type)}">${esc(tOr("idx.ev."+e.type,e.type))}</span>
+      <span><b>${esc(what)}</b> ${e.ip? "· "+esc(e.ip):""} ${extra}</span></div>`;
+  }).join("") : `<div class="ev"><span class="roam">${esc(t("idx.no_events"))}</span></div>`;
+}
+
+/* ---------- filter ---------- */
+function applyFilter(){
+  const q=$("#search").value.trim().toLowerCase();
+  document.querySelectorAll(".client[data-hay]").forEach(el=>{
+    el.classList.toggle("hide", q && !el.dataset.hay.includes(q));
+  });
+}
+$("#search").addEventListener("input",applyFilter);
+
+/* ---------- device actions ---------- */
+function fmtAgo(ts){
+  const s=Math.max(0,Math.round(Date.now()/1000-ts));
+  const v = s<90? s+" s" : s<5400? Math.round(s/60)+" min" : s<172800? Math.round(s/3600)+" h" : Math.round(s/86400)+" d";
+  return t("common.ago",{v});
+}
+async function trustCert(host,name){
+  if(!confirm(t("idx.trust_cert_confirm",{name,host}))) return;
+  await fetch("/api/tls-pins/"+encodeURIComponent(host),{method:"DELETE"});
+  setTimeout(refresh,2000);
+}
+async function post(url){ const r=await fetch(url,{method:"POST"}); return r.json(); }
+/* ---------- settings ---------- */
+let cfgData=null, editingDev=null;
+
+function toggleSettings(){
+  const s=$("#settings");
+  s.classList.toggle("show");
+  if(s.classList.contains("show")){ loadConfig(); loadTokens(); }
+}
+function renderLanguages(){
+  $("#lang").innerHTML=I18N.languages.map(l=>
+    `<option value="${esc(l.code)}" ${l.code===I18N.lang?"selected":""}>${esc(l.name)}</option>`).join("");
+}
+async function saveLanguage(){
+  const r=await fetch("/api/config/language",{method:"PUT",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({language:$("#lang").value})});
+  if(r.ok){ location.reload(); return; }
+  const j=await jsonOf(r); msg("#lang_msg", j.detail||t("common.error"), false);
+}
+async function loadConfig(){
+  cfgData=await (await fetch("/api/config")).json();
+  const w=cfgData.webhook||{};
+  $("#w_url").value=w.url||"";
+  $("#w_new").checked=w.notify_new??true;
+  $("#w_gone").checked=w.notify_gone??true;
+  $("#w_back").checked=!!w.notify_back;
+  $("#w_roam").checked=!!w.notify_roaming;
+  $("#w_min").value=w.gone_after_min||10;
+  const z=cfgData.ieee802154||{};
+  $("#z_thread").value=(z.thread||[]).join(", "); $("#z_zigbee").value=(z.zigbee||[]).join(", ");
+  renderLanguages(); renderDevRows(); renderSync(); renderAlertCfg();
+}
+function renderDevRows(){
+  $("#devrows").innerHTML=cfgData.devices.map(d=>`<tr>
+    <td><b>${esc(d.name)}</b>${cfgData.dhcp_source===d.name?` <span class="badge uptodate" title="${esc(t("idx.dev.dhcp_badge_title"))}">dhcp</span>`:""}</td>
+    <td>${esc(d.host)}</td><td>${esc(d.role)}</td>
+    <td>${esc((d.ignore_interfaces||[]).join(", "))}</td>
+    <td><button data-edit-dev="${esc(d.name)}">${esc(t("common.edit"))}</button>
+        <button class="del" data-del-dev="${esc(d.name)}">${esc(t("common.delete"))}</button></td>
+  </tr>`).join("");
+  const sel=$("#dhcp_src");
+  sel.innerHTML=`<option value="">${esc(t("idx.dev.none"))}</option>`+cfgData.devices.map(d=>
+    `<option ${cfgData.dhcp_source===d.name?"selected":""}>${esc(d.name)}</option>`).join("");
+}
+function msg(id, text, ok){
+  const el=$(id); el.textContent=text; el.className="msg "+(ok?"ok":"err");
+  if(ok) setTimeout(()=>{el.textContent=""},4000);
+}
+function editDevice(name){
+  const d=cfgData.devices.find(x=>x.name===name); if(!d) return;
+  editingDev=name;
+  $("#d_name").value=d.name; $("#d_host").value=d.host; $("#d_role").value=d.role||"ap";
+  $("#d_ign").value=(d.ignore_interfaces||[]).join(", ");
+  $("#d_upl").value=d.uplink_interface||"";
+  $("#d_save").textContent=t("common.save"); $("#d_cancel").classList.remove("hide");
+}
+function resetDevForm(){
+  editingDev=null;
+  ["d_name","d_host","d_ign","d_upl"].forEach(i=>$("#"+i).value="");
+  $("#d_role").value="ap";
+  $("#d_save").textContent=t("common.add"); $("#d_cancel").classList.add("hide");
+  $("#d_msg").textContent="";
+}
+function devPayload(){
+  return {name:$("#d_name").value, host:$("#d_host").value, role:$("#d_role").value,
+          ignore_interfaces:$("#d_ign").value, uplink_interface:$("#d_upl").value||null};
+}
+async function saveDevice(){
+  const url = editingDev? `/api/config/devices/${encodeURIComponent(editingDev)}` : "/api/config/devices";
+  const r=await fetch(url,{method:editingDev?"PUT":"POST",
+    headers:{"Content-Type":"application/json"}, body:JSON.stringify(devPayload())});
+  const j=await jsonOf(r);
+  if(!r.ok){ msg("#d_msg", j.detail||t("common.error"), false); return; }
+  msg("#d_msg", editingDev?t("common.saved"):t("idx.dev.added"), true);
+  resetDevForm(); loadConfig(); setTimeout(refresh, 2000);
+}
+async function deleteDevice(name){
+  if(!confirm(t("idx.dev.delete_confirm",{name}))) return;
+  const r=await fetch(`/api/config/devices/${encodeURIComponent(name)}`,{method:"DELETE"});
+  if(r.ok){ loadConfig(); setTimeout(refresh, 2000); }
+}
+async function testDevice(){
+  msg("#d_msg",t("idx.dev.testing"),true);
+  const r=await fetch("/api/config/devices/test",{method:"POST",
+    headers:{"Content-Type":"application/json"}, body:JSON.stringify({host:$("#d_host").value})});
+  const j=await jsonOf(r);
+  if(j.ok){ msg("#d_msg",`OK: ${j.identity||"?"} · ${j.board||""} · ROS ${j.version||"?"}`,true);
+    if(!$("#d_name").value && j.identity) $("#d_name").value=j.identity; }
+  else msg("#d_msg",t("idx.dev.cannot_connect",{error:j.error||j.detail||"?"}),false);
+}
+function renderSync(){
+  const diff=(snap&&snap.devices||[]).filter(d=>d.reachable&&d.identity&&d.identity!==d.name);
+  $("#syncrow").innerHTML = diff.length
+    ? `<span style="color:var(--warn);font-size:11px">${esc(t("idx.dev.names_differ"))} ${diff.map(d=>esc(d.name)+" → "+esc(d.identity)).join(", ")}</span>
+       <button onclick="syncNames()">${esc(t("idx.dev.sync_names"))}</button><span class="msg" id="s_msg"></span>`
+    : `<span style="color:var(--dim);font-size:11px">${esc(t("idx.dev.names_match"))} ✓</span>`;
+}
+async function syncNames(){
+  if(!confirm(t("idx.dev.sync_confirm"))) return;
+  const r=await fetch("/api/config/devices/sync-names",{method:"POST"});
+  const j=await jsonOf(r);
+  if(!r.ok){ msg("#s_msg", j.detail||t("common.error"), false); return; }
+  msg("#s_msg", t("idx.dev.renamed",{n:j.renamed.length})+(j.skipped.length? ", "+t("idx.dev.skipped",{n:j.skipped.length})+": "+j.skipped.map(x=>x.from+" ("+x.why+")").join(", "):""), !j.skipped.length);
+  loadConfig(); setTimeout(refresh, 2500);
+}
+async function saveIeee(){
+  const r=await fetch("/api/config/ieee802154",{method:"PUT",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({thread:$("#z_thread").value, zigbee:$("#z_zigbee").value})});
+  const j=await jsonOf(r);
+  msg("#z_msg", r.ok? t("common.saved") : (j.detail||t("common.error")), r.ok);
+}
+
+/* ---------- device history ---------- */
+let histDev=null, histHours=24;
+function openHist(name){
+  histDev=name; $("#devhist").classList.remove("hide");
+  loadHist(); $("#devhist").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+function closeHist(){ histDev=null; $("#devhist").classList.add("hide"); }
+// device names come from config / router identity: pass them via data-* (never inline JS)
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-hist],[data-trust-host],[data-edit-dev],[data-del-dev]"); if(!b) return;
+  const ds=b.dataset;
+  if(ds.hist!=null) openHist(ds.hist);
+  else if(ds.trustHost!=null) trustCert(ds.trustHost,ds.trustName);
+  else if(ds.editDev!=null) editDevice(ds.editDev);
+  else deleteDevice(ds.delDev);
+});
+document.querySelectorAll("#devhist .seg button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("#devhist .seg button").forEach(x=>x.classList.toggle("on",x===b));
+  histHours=+b.dataset.h; loadHist();
+}));
+const fmtBps=v=>v>=1e9?(v/1e9).toFixed(1)+" G":v>=1e6?(v/1e6).toFixed(v>=1e7?0:1)+" M":v>=1e3?(v/1e3).toFixed(0)+" k":v.toFixed(0);
+async function loadHist(){
+  if(!histDev) return;
+  const name=histDev;
+  const d=(snap.devices||[]).find(x=>x.name===name)||{};
+  $("#hname").textContent=(d.identity||name);
+  const j=await (await fetch(`/api/devices/${encodeURIComponent(name)}/history?hours=${histHours}`)).json();
+  if(name!==histDev) return;
+  const S=j.samples, now=Date.now()/1000, range=[now-histHours*3600, now];
+  const gap=Math.max(120, histHours*3600/300*3);
+  const down=[]; let st=null;
+  S.forEach((x,i)=>{ if(x.up===0 && st==null) st=x.ts; if(x.up!==0 && st!=null){ down.push([st,x.ts]); st=null; } });
+  if(st!=null) down.push([st, now]);
+  const up=(d.uplink||{}).name;
+  $("#hmeta").textContent = S.length? t("idx.h.meta",{n:S.length, outages:down.length||t("idx.h.none")}) : t("idx.h.no_data");
+  const box=$("#hcharts");
+  const charts=[
+    {t:"CPU (%)", o:{series:[{name:"CPU",color:"var(--s1)",pts:S.map(x=>[x.ts,x.cpu])}],unit:"%",fmt:v=>v.toFixed(0),max:100}},
+    {t:"RAM (%)", o:{series:[{name:"RAM",color:"var(--s1)",pts:S.map(x=>[x.ts,x.mem])}],unit:"%",fmt:v=>v.toFixed(0),max:100}},
+    {t:t("idx.h.temp"), o:{series:[{name:t("idx.h.temp_series"),color:"var(--s1)",pts:S.map(x=>[x.ts,x.temp])}],unit:"°C",fmt:v=>v.toFixed(0),zero:false}},
+    {t:t("idx.h.uplink",{iface:up? " "+up:""}), o:{series:[
+        {name:t("idx.h.in"),color:"var(--s1)",pts:S.map(x=>[x.ts,x.rx])},
+        {name:t("idx.h.out"),color:"var(--s2)",pts:S.map(x=>[x.ts,x.tx])}],unit:"b/s",fmt:fmtBps}},
+    {t:t("idx.h.clients"), o:{series:[{name:t("idx.clients"),color:"var(--s1)",pts:S.map(x=>[x.ts,x.clients])}],unit:"",fmt:v=>v.toFixed(0)}},
+  ];
+  const P=j.polls||[];
+  if(P.length){
+    const ser=[{name:"monitor",color:"var(--s1)",pts:P.map(x=>[x.ts,x.monitor])}];
+    if(P.some(x=>x.conntrack!=null)) ser.push({name:"conntrack",color:"var(--s2)",pts:P.map(x=>[x.ts,x.conntrack])});
+    const ps=j.poll_summary||{}, m=ps.monitor;
+    const st=Object.entries(j.poll_steps||{}).slice(0,4).map(([k,v])=>`${k} ${Math.round(v)}`).join(", ");
+    charts.push({t:t("idx.h.poll")+(m? ` · 1 h ø ${Math.round(m.avg)}, p95 ${Math.round(m.p95)}`:"")+(st? " · "+t("idx.h.slowest",{steps:st}):""),
+      o:{series:ser,unit:"ms",fmt:v=>v.toFixed(0)}});
+  }
+  box.innerHTML=charts.map((c,i)=>`<div><h4>${esc(c.t)}</h4><div class="chbox" id="ch${i}"></div></div>`).join("");
+  charts.forEach((c,i)=>tsChart($("#ch"+i), {...c.o, range, down, gap}));
+}
+window.addEventListener("resize",()=>{ clearTimeout(window._rz); window._rz=setTimeout(loadHist,200); });
+
+/* ---------- alerts ---------- */
+let AL=null;
+async function loadAlerts(){
+  try{ AL=await (await fetch("/api/alerts?hours=24")).json(); }catch(e){ return; }
+  const act=AL.active, rec=AL.recent.filter(a=>!(a.state==="fired" && act.some(x=>x.key===a.key && Math.abs(x.ts-a.ts)<1)));
+  $("#alcnt").innerHTML = act.length? `<span style="color:var(--err)">${esc(tn("idx.al.active",act.length))}</span>` : `<span style="color:var(--ok)">${esc(t("idx.al.all_ok"))}</span>`;
+  const row=(a,active)=>`<div class="al ${active?"active":""}"><span class="t">${fmtTs(a.ts)}</span>
+    <span class="s ${a.state==="resolved"?"resolved":esc(a.severity)}">${esc(a.state==="resolved"?t("idx.al.resolved"):a.state==="event"?t("idx.al.event"):tOr("idx.al.sev."+a.severity,a.severity))}</span>
+    <span><b>${esc(a.title)}</b> <span class="m">${esc(a.message||"")}</span>${a.sent===0&&!active?` <span class="nosend" title="${esc(t("idx.al.not_sent_title"))}">· ${esc(t("idx.al.not_sent"))}</span>`:""}
+    ${a.type==="config_changed"&&a.detail&&a.detail.backup_id? ` <a href="/backups" style="color:var(--wifi);font-size:10.5px">${esc(t("idx.al.diff"))} ↗</a>`:""}</span></div>`;
+  $("#alerts").innerHTML = (act.map(a=>row(a,true)).join("") + rec.map(a=>row(a,false)).join(""))
+    || `<div class="al"><span class="m">${esc(t("idx.al.nothing"))}</span></div>`;
+}
+function renderAlertCfg(){
+  const c=cfgData.alerts; if(!c) return;
+  $("#alcfg").innerHTML=Object.keys(c.enabled).map(k=>`<label><input type="checkbox" data-al="${esc(k)}" ${c.enabled[k]?"checked":""}> ${esc(tOr("alert.type."+k,k))}</label>`).join("");
+  $("#a_off").value=c.offline_after_min; $("#a_cpu").value=c.cpu_threshold; $("#a_temp").value=c.temp_threshold;
+  $("#a_radio").value=c.radio_down_min; $("#a_iot").value=c.iot_baseline_days;
+}
+async function saveAlerts(){
+  const en={}; document.querySelectorAll("[data-al]").forEach(x=>en[x.dataset.al]=x.checked);
+  const r=await fetch("/api/config/alerts",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({enabled:en,
+    offline_after_min:+$("#a_off").value, cpu_threshold:+$("#a_cpu").value, temp_threshold:+$("#a_temp").value,
+    radio_down_min:+$("#a_radio").value, iot_baseline_days:+$("#a_iot").value})});
+  const j=await jsonOf(r); msg("#a_msg", r.ok?t("common.saved"):(j.detail||t("common.error")), r.ok);
+}
+async function testAlert(){ const r=await fetch("/api/alerts/test",{method:"POST"}); msg("#a_msg", r.ok?t("idx.al.test_sent"):t("common.error"), r.ok); setTimeout(loadAlerts,1000); }
+
+async function saveDhcpSource(){
+  const r=await fetch("/api/config/dhcp-source",{method:"PUT",
+    headers:{"Content-Type":"application/json"}, body:JSON.stringify({name:$("#dhcp_src").value||null})});
+  msg("#dhcp_msg", r.ok?t("common.saved"):t("common.error"), r.ok);
+}
+async function loadTokens(){
+  const toks=await (await fetch("/api/tokens")).json();
+  $("#tokrows").innerHTML = toks.length? toks.map(t_=>`<tr>
+    <td><b>${esc(t_.label)}</b></td>
+    <td>${fmtTs(t_.created)||""}</td>
+    <td>${fmtTs(t_.last_used)||`<span style="color:var(--dim)">${esc(t("idx.tok.never"))}</span>`}</td>
+    <td><button class="del" onclick="deleteToken(${t_.id})">${esc(t("idx.tok.revoke"))}</button></td>
+  </tr>`).join("") : `<tr><td colspan="4" style="color:var(--dim)">${esc(t("idx.tok.none"))}</td></tr>`;
+}
+async function createToken(){
+  const r=await fetch("/api/tokens",{method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({label:$("#t_label").value})});
+  const j=await jsonOf(r);
+  if(!r.ok){ msg("#t_msg", j.detail||t("common.error"), false); return; }
+  $("#t_val").textContent=j.token;
+  $("#t_new").classList.remove("hide");
+  $("#t_label").value="";
+  loadTokens();
+}
+async function deleteToken(id){
+  if(!confirm(t("idx.tok.revoke_confirm"))) return;
+  await fetch("/api/tokens/"+id,{method:"DELETE"});
+  loadTokens();
+}
+
+async function saveWebhook(){
+  const body={url:$("#w_url").value, notify_new:$("#w_new").checked, notify_gone:$("#w_gone").checked,
+    notify_back:$("#w_back").checked, notify_roaming:$("#w_roam").checked,
+    gone_after_min:parseInt($("#w_min").value)||10};
+  const r=await fetch("/api/config/webhook",{method:"PUT",
+    headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+  const j=await jsonOf(r);
+  msg("#w_msg", r.ok?t("common.saved"):(j.detail||t("common.error")), r.ok);
+}
+async function testWebhook(){
+  msg("#w_msg",t("common.sending"),true);
+  const r=await fetch("/api/config/webhook/test",{method:"POST"});
+  const j=await jsonOf(r);
+  msg("#w_msg", r.ok?t("idx.wh.delivered",{status:j.status}):(j.detail||t("common.error")), r.ok&&j.ok);
+}
+
+/* ---------- refresh ---------- */
+async function logout(){
+  await fetch("/api/logout",{method:"POST"});
+  location.href="/login";
+}
+
+async function refresh(){
+  try{
+    const r=await fetch("/api/snapshot");
+    if(r.status===401){ location.href="/login"; return; }
+    snap=await r.json();
+    if(!snap.updated_at){ $("#meta").textContent=t("common.waiting_poll"); return; }
+    $("#meta").textContent=t("common.updated_at",{time:new Date(snap.updated_at*1000).toLocaleTimeString(I18N.locale)})
+      +" · "+tn("idx.n_clients",snap.clients.length);
+    renderFleet(); renderMap(); renderEvents();
+    if(histDev && (refresh.n=(refresh.n||0)+1)%4===0) loadHist();
+    if($("#settings").classList.contains("show")) renderSync();
+    const nUpd=snap.devices.filter(d=>d.update_available||d.fw_available).length;
+    $("#updcnt").innerHTML = nUpd? `<b>${nUpd}</b>` : "";
+    $("#updlink").classList.toggle("has", nUpd>0);
+    $("#vertxt").textContent = snap.version || "";
+    $("#pulse").classList.add("on");
+    setTimeout(()=>$("#pulse").classList.remove("on"), 700);
+  }catch(e){ $("#meta").textContent=t("common.backend_down"); }
+}
+I18N.ready.then(()=>{
+  refresh(); setInterval(refresh, 15000);
+  loadAlerts(); setInterval(loadAlerts,30000);
+});
+</script>
+</body>
+</html>

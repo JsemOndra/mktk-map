@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="title.backups">mktk-map</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#111823; --panel2:#0e141d; --line:#1e2a3a;
+    --txt:#c9d6e3; --dim:#5f7288; --mono:'JetBrains Mono','Cascadia Code','Fira Code',ui-monospace,Consolas,monospace;
+    --ok:#3ddc84; --warn:#ffb020; --err:#ff5d5d; --wifi:#4db8ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:13px}
+  header.top{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  header.top h1{font-size:15px;margin:0;letter-spacing:2px;font-weight:600}
+  header.top h1 b{color:var(--ok)} header.top h1 span{color:var(--dim);font-weight:400}
+  .hbtn{border:1px solid var(--line);color:var(--dim);text-decoration:none;background:none;font-family:inherit;
+    font-size:12px;padding:5px 10px;border-radius:4px;cursor:pointer}
+  .hbtn:hover{color:var(--txt);border-color:var(--dim)}
+  #meta{color:var(--dim);font-size:11px;margin-left:auto}
+  main{padding:20px;max-width:1500px;margin:0 auto}
+  h2{font-size:11px;letter-spacing:3px;color:var(--dim);text-transform:uppercase;margin:24px 0 10px;display:flex;gap:12px;align-items:center}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+  .dim{color:var(--dim)} .ok{color:var(--ok)} .warn{color:var(--warn)} .err{color:var(--err)}
+  input{background:var(--panel2);border:1px solid var(--line);color:var(--txt);font-family:inherit;font-size:12px;padding:5px 8px;border-radius:4px;outline:none}
+  button.b{background:none;border:1px solid var(--line);color:var(--txt);font-family:inherit;font-size:11px;padding:4px 10px;border-radius:4px;cursor:pointer;white-space:nowrap}
+  button.b:hover:not(:disabled){border-color:var(--dim)} button.b.primary{border-color:var(--ok);color:var(--ok)}
+  button.b:disabled{opacity:.35;cursor:not-allowed}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{color:var(--dim);font-size:10px;letter-spacing:1px;text-transform:uppercase;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);font-weight:400;white-space:nowrap}
+  td{padding:6px 8px;border-bottom:1px solid var(--panel2);vertical-align:top}
+  td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  tr.v{cursor:pointer} tr.v:hover td{background:var(--panel2)} tr.sel td{background:#13233a}
+  .name{font-weight:700} .sub{color:var(--dim);font-size:10.5px}
+  .tag{display:inline-block;font-size:9.5px;padding:0 5px;border-radius:3px;background:#1a2330;color:var(--dim);margin-left:4px}
+  .tag.ch{background:#2a2008;color:var(--warn)}
+  .cols{display:grid;grid-template-columns:minmax(380px,1fr) 2fr;gap:12px}
+  @media (max-width:1100px){ .cols{grid-template-columns:1fr} }
+  .diff{background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px 0;font-size:11.5px;max-height:70vh;overflow:auto;white-space:pre}
+  .diff div{padding:0 10px}
+  .diff .a{background:#0f2a1a;color:#8ff0b5} .diff .r{background:#2e1214;color:#ff9f9f} .diff .h{color:var(--wifi)} .diff .c{color:var(--dim)}
+  .banner{border:1px solid var(--warn);background:#2a2008;color:var(--warn);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;line-height:1.6}
+  .msg{font-size:11px;margin-left:6px}
+  a{color:var(--wifi)}
+</style>
+<link rel="icon" href="/static/logo.svg" type="image/svg+xml">
+<script src="/static/i18n.js"></script>
+</head>
+<body>
+<header class="top">
+  <img src="/static/logo.svg" width="64" height="64" alt="">
+  <h1>MKTK<b>·</b>MAP <span>/ <span data-i18n="bak.title"></span></span></h1>
+  <a class="hbtn" href="/" data-i18n="nav.back"></a>
+  <span id="meta" data-i18n="common.loading"></span>
+</header>
+<main>
+  <div id="banner"></div>
+  <div class="panel">
+    <div class="row" style="margin-bottom:8px"><span class="dim" id="info"></span>
+      <button class="b" style="margin-left:auto" onclick="runAll()" data-i18n="bak.run_all"></button></div>
+    <table><thead><tr><th data-i18n="bak.col.device"></th><th data-i18n="bak.col.last_version"></th><th data-i18n="bak.col.last_check"></th><th data-i18n="bak.col.versions"></th><th data-i18n="bak.col.state"></th><th></th></tr></thead>
+      <tbody id="devs"></tbody></table>
+  </div>
+
+  <div class="cols" style="margin-top:12px">
+    <div class="panel">
+      <h2 style="margin-top:0"><span data-i18n="bak.versions_h"></span> <span class="dim" id="vfilter" style="letter-spacing:0;text-transform:none"></span></h2>
+      <div style="max-height:70vh;overflow:auto"><table><thead><tr><th data-i18n="bak.col.when"></th><th data-i18n="bak.col.device"></th><th data-i18n="bak.col.change"></th><th></th></tr></thead><tbody id="vers"></tbody></table></div>
+    </div>
+    <div class="panel">
+      <h2 style="margin-top:0" id="dtitle" data-i18n="bak.diff_h"></h2>
+      <div id="dmeta" class="sub" style="margin-bottom:8px" data-i18n="bak.pick_version"></div>
+      <div class="diff" id="diff"></div>
+    </div>
+  </div>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+function esc(s){return (s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+const dt=ts=>ts? new Date(ts*1000).toLocaleString(I18N.locale,{day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit"}) : "–";
+const ago=ts=>{ if(!ts) return "–"; const s=Date.now()/1000-ts; if(s<90) return t("common.ago",{v:Math.round(s)+" s"}); if(s<5400) return t("common.ago",{v:Math.round(s/60)+" min"}); if(s<172800) return t("common.ago",{v:Math.round(s/3600)+" h"}); return dt(ts); };
+/* backup reason: code from the backend (older records are Czech -> shown as they are) */
+const reason=r=>r? tOr("bak.reason."+r, r) : "";
+let B=null, dev="", sel=null, cred=null;
+
+async function load(){
+  try{
+    const r=await fetch("/api/backups?device="+encodeURIComponent(dev)); if(r.status===401){ location.href="/login"; return; }
+    B=await r.json();
+    if(cred===null){ try{ cred=(await (await fetch("/api/updates/state")).json()).credentials; }catch(e){ cred={active:false}; } }
+    render(); $("#meta").textContent=t("common.updated_at",{time:new Date().toLocaleTimeString(I18N.locale)});
+  }catch(e){ $("#meta").innerHTML='<span class="err">'+esc(t("common.backend_down"))+'</span>'; }
+}
+function render(){
+  $("#info").textContent=t("bak.info",{h:B.every_h});
+  const sshFail=B.devices.filter(d=>d.status&&!d.status.ok&&/SSH|ssh|oprávn|permission/.test(d.status.error||""));
+  $("#banner").innerHTML = sshFail.length? `<div class="banner">${t("bak.ssh_needed")}
+    ${esc(t("bak.missing_on",{list:sshFail.map(d=>d.name).join(", ")}))}
+    <div class="row" style="margin-top:6px">${cred&&cred.active? '<span class="ok">✓ '+esc(cred.user)+'</span>' : `<input id="cu" value="admin" style="width:90px"><input id="cp" type="password" placeholder="${esc(t("common.mikrotik_password"))}" style="width:170px"><button class="b" onclick="saveCred()">${esc(t("common.verify"))}</button>`}
+      <button class="b primary" ${cred&&cred.active?"":"disabled"} onclick="enableSsh()">${esc(t("bak.enable_ssh"))}</button><span class="msg" id="smsg"></span></div></div>` : "";
+  $("#devs").innerHTML=B.devices.map(d=>{
+    const st=d.status, last=d.last;
+    const stat = d.queued? `<span class="warn">${esc(t("bak.queued"))}</span>` : !st? `<span class="dim">${esc(t("bak.not_yet"))}</span>`
+      : st.ok? `<span class="ok">✓ ${esc(ago(st.ts))}</span>${st.changed?' <span class="tag ch">'+esc(t("bak.changed"))+'</span>':""}`
+      : `<span class="err" title="${esc(st.error)}">✗ ${esc((st.error||"").slice(0,70))}</span>`
+        + (/klíč|klic|SSH key/i.test(st.error||"")? ` <button class="b" data-reset-pin="${esc(d.host)}">${esc(t("bak.trust_key"))}</button>`:"");
+    const cnt=B.list.filter(v=>v.device===d.name).length;
+    return `<tr><td><a href="#" data-dev="${esc(d.name)}" class="name">${esc(d.name)}</a><div class="sub">${esc(d.host)}</div></td>
+      <td>${last? dt(last.ts)+' <span class="sub">'+esc(last.version||"")+'</span>' : "–"}</td>
+      <td class="sub">${last? esc(ago(last.checked)) : "–"}</td><td class="n">${cnt}</td><td>${stat}</td>
+      <td><button class="b" data-run="${esc(d.name)}">${esc(t("bak.run"))}</button></td></tr>`;
+  }).join("");
+  $("#vfilter").innerHTML = dev? `${esc(t("bak.only",{x:dev}))} · <a href="#" data-dev="">${esc(t("bak.all"))}</a>` : esc(t("bak.all_devices"));
+  $("#vers").innerHTML=B.list.map(v=>{
+    const s=v.summary;
+    const ch = s? `<span class="ok">+${s.added}</span> <span class="err">−${s.removed}</span><div class="sub">${esc((s.sections||[]).join(", "))}</div>` : `<span class="dim">${esc(t("bak.first"))}</span>`;
+    return `<tr class="v ${sel===v.id?"sel":""}" data-id="${v.id}"><td><span style="white-space:nowrap">${dt(v.ts)}</span><div class="sub">${esc(reason(v.reason))}${v.who? " · "+esc(v.who):""}</div></td>
+      <td>${esc(v.device)}<div class="sub">${esc(v.version||"")}</div></td><td>${ch}</td>
+      <td><a href="/api/backups/${v.id}/download" title="${esc(t("bak.download_title"))}">↓ .rsc</a></td></tr>`;
+  }).join("") || `<tr><td colspan="4" class="dim">${esc(t("bak.none"))}</td></tr>`;
+}
+async function showDiff(id){
+  sel=id; render();
+  const d=await (await fetch(`/api/backups/${id}/diff`)).json();
+  $("#dtitle").textContent=t("bak.diff_h")+" · "+d.backup.device;
+  $("#dmeta").innerHTML = d.against? `${dt(d.against.ts)} (#${d.against.id}) → ${dt(d.backup.ts)} (#${d.backup.id}) · <span class="ok">+${d.added}</span> <span class="err">−${d.removed}</span>
+     · <a href="/api/backups/${d.backup.id}/download">${esc(t("bak.download_full"))}</a>` : esc(t("bak.first_full"));
+  $("#diff").innerHTML = d.lines.length? d.lines.map(l=>{
+    const c = l.startsWith("+++")||l.startsWith("---")? "h" : l.startsWith("@@")? "h" : l[0]==="+"? "a" : l[0]==="-"? "r" : "c";
+    return `<div class="${c}">${esc(l)}</div>`; }).join("") : `<div class="c">${esc(t("bak.no_changes"))}</div>`;
+}
+async function saveCred(){
+  const r=await fetch("/api/updates/credentials",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:$("#cu").value,password:$("#cp").value})});
+  const j=await r.json(); if(!r.ok){ $("#smsg").innerHTML='<span class="err">'+esc(j.detail)+'</span>'; return; } cred=j.credentials; render();
+}
+async function enableSsh(){
+  const r=await fetch("/api/backups/enable-ssh",{method:"POST"}); const j=await r.json();
+  $("#smsg").innerHTML = r.ok? j.results.map(x=>`${esc(x.device)}: ${x.ok?'<span class="ok">ok</span>':'<span class="err">'+esc(x.error)+'</span>'}`).join(" · ") : '<span class="err">'+esc(j.detail)+'</span>';
+  setTimeout(load,4000);
+}
+async function resetPin(host){
+  if(!confirm(t("bak.confirm_key",{host}))) return;
+  await fetch("/api/tls-pins/"+encodeURIComponent("ssh:"+host),{method:"DELETE"}); load();
+}
+async function runAll(){ await fetch("/api/backups/run",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}); setTimeout(load,800); }
+document.addEventListener("click",async e=>{
+  const p=e.target.closest("[data-reset-pin]"); if(p){ resetPin(p.dataset.resetPin); return; }
+  const a=e.target.closest("[data-dev]"); if(a){ e.preventDefault(); dev=a.dataset.dev; load(); return; }
+  const r=e.target.closest("[data-run]"); if(r){ await fetch("/api/backups/run",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({device:r.dataset.run})}); setTimeout(load,800); return; }
+  const v=e.target.closest("tr.v"); if(v && !e.target.closest("a")) showDiff(+v.dataset.id);
+});
+I18N.ready.then(()=>{ load(); setInterval(load,15000); });
+</script>
+</body>
+</html>

@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="title.iot">mktk-map</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#111823; --panel2:#0e141d; --line:#1e2a3a;
+    --txt:#c9d6e3; --dim:#5f7288; --mono:'JetBrains Mono','Cascadia Code','Fira Code',ui-monospace,Consolas,monospace;
+    --ok:#3ddc84; --warn:#ffb020; --err:#ff5d5d; --wifi:#4db8ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:13px}
+  header.top{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  header.top h1{font-size:15px;margin:0;letter-spacing:2px;font-weight:600}
+  header.top h1 b{color:var(--ok)} header.top h1 span{color:var(--dim);font-weight:400}
+  .hbtn{border:1px solid var(--line);color:var(--dim);text-decoration:none;background:none;font-family:inherit;
+    font-size:12px;padding:5px 10px;border-radius:4px;cursor:pointer}
+  .hbtn:hover{color:var(--txt);border-color:var(--dim)}
+  #meta{color:var(--dim);font-size:11px;margin-left:auto}
+  main{padding:20px;max-width:1300px;margin:0 auto}
+  h2{font-size:11px;letter-spacing:3px;color:var(--dim);text-transform:uppercase;margin:26px 0 10px}
+  h3{font-size:10px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;margin:16px 0 6px;font-weight:400}
+  h3:first-child{margin-top:0}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:900px){ .cols{grid-template-columns:1fr} }
+  .dim{color:var(--dim)} .ok{color:var(--ok)} .warn{color:var(--warn)} .err{color:var(--err)}
+  input,select{background:var(--panel2);border:1px solid var(--line);color:var(--txt);font-family:inherit;
+    font-size:12px;padding:5px 8px;border-radius:4px;outline:none}
+  input:focus{border-color:var(--wifi)}
+  button.b{background:none;border:1px solid var(--line);color:var(--txt);font-family:inherit;
+    font-size:11px;padding:4px 10px;border-radius:4px;cursor:pointer;white-space:nowrap}
+  button.b:hover:not(:disabled){border-color:var(--dim)}
+  button.b.primary{border-color:var(--ok);color:var(--ok)}
+  button.b.danger{border-color:#4a2a10;color:var(--warn)}
+  button.b.del{color:var(--dim)} button.b.del:hover:not(:disabled){color:var(--err);border-color:var(--err)}
+  button.b:disabled{opacity:.35;cursor:not-allowed}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{color:var(--dim);font-size:10px;letter-spacing:1px;text-transform:uppercase;text-align:left;
+    padding:5px 8px;border-bottom:1px solid var(--line);font-weight:400;white-space:nowrap}
+  td{padding:6px 8px;border-bottom:1px solid var(--panel2);vertical-align:top}
+  td.n{text-align:right;font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:none}
+  .tblwrap{overflow-x:auto}
+  .name{font-weight:700} .sub{color:var(--dim);font-size:10.5px}
+  .note{font-size:11px;color:var(--dim);margin-top:8px;line-height:1.5}
+  .msg{font-size:11px} .msg.ok{color:var(--ok)} .msg.err{color:var(--err)}
+  .tag{display:inline-block;font-size:10px;padding:0 6px;border-radius:3px;background:#1a2330;color:var(--dim)}
+  .banner{border:1px solid var(--warn);background:#2a2008;color:var(--warn);border-radius:6px;padding:10px 14px;margin-top:12px}
+  .learn{border:1px solid var(--warn);border-radius:6px;padding:12px 14px;margin-top:12px;background:var(--panel)}
+  .learn .hd{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+  details summary{cursor:pointer;color:var(--dim);font-size:11px}
+</style>
+<link rel="icon" href="/static/logo.svg" type="image/svg+xml">
+<script src="/static/i18n.js"></script>
+</head>
+<body>
+<header class="top">
+  <img src="/static/logo.svg" width="64" height="64" alt="">
+  <h1>MKTK<b>·</b>MAP <span>/ IoT whitelist</span></h1>
+  <a class="hbtn" href="/" data-i18n="nav.back"></a>
+  <span id="meta" data-i18n="common.loading"></span>
+</header>
+<main>
+  <div class="panel" id="cred"></div>
+  <div id="banners"></div>
+  <div id="learnbox"></div>
+
+  <h2 data-i18n="iot.drops_h"></h2>
+  <div class="panel"><div class="tblwrap"><table>
+    <thead><tr><th data-i18n="iot.col.device"></th><th data-i18n="iot.col.dest"></th><th>port</th><th data-i18n="iot.col.attempts"></th><th data-i18n="iot.col.last"></th><th></th></tr></thead>
+    <tbody id="drops"></tbody></table></div>
+    <div class="note" id="dropnote"></div>
+  </div>
+
+  <h2>Whitelist</h2>
+  <div class="cols">
+    <div class="panel">
+      <h3 data-i18n="iot.domains_h"></h3>
+      <div class="tblwrap"><table>
+        <thead><tr><th data-i18n="iot.col.domain"></th><th data-i18n="iot.col.tag"></th><th></th></tr></thead>
+        <tbody id="domains"></tbody></table></div>
+      <div class="row" style="margin-top:10px">
+        <input id="dn" data-i18n-placeholder="iot.domain_ph" style="width:210px">
+        <label class="sub"><input type="checkbox" id="dsub"> <span data-i18n="iot.with_subdomains"></span></label>
+        <input id="dtag" data-i18n-placeholder="iot.tag_device_ph" style="width:130px">
+        <button class="b primary" onclick="addDomain()" data-i18n="common.add"></button>
+        <span class="msg" id="dmsg"></span>
+      </div>
+      <div class="note" data-i18n="iot.domains_note"></div>
+      <details style="margin-top:8px"><summary id="dynsum"></summary><div id="dynlist" class="sub" style="margin-top:6px;line-height:1.6"></div></details>
+    </div>
+    <div class="panel">
+      <h3 data-i18n="iot.addrs_h"></h3>
+      <div class="tblwrap"><table>
+        <thead><tr><th data-i18n="iot.col.address"></th><th data-i18n="iot.col.tag"></th><th></th></tr></thead>
+        <tbody id="addrs"></tbody></table></div>
+      <div class="row" style="margin-top:10px">
+        <input id="an" data-i18n-placeholder="iot.addr_ph" style="width:170px">
+        <input id="atag" data-i18n-placeholder="iot.col.tag" style="width:130px">
+        <button class="b primary" onclick="addAddr()" data-i18n="common.add"></button>
+        <span class="msg" id="amsg"></span>
+      </div>
+      <h3 data-i18n="iot.ports_h"></h3>
+      <div class="tblwrap"><table>
+        <thead><tr><th data-i18n="iot.col.rule"></th><th data-i18n="iot.col.ports"></th><th data-i18n="iot.col.source"></th><th data-i18n="iot.col.packets"></th><th></th></tr></thead>
+        <tbody id="rules"></tbody></table></div>
+      <div class="row" style="margin-top:10px">
+        <select id="pp"><option>tcp</option><option>udp</option></select>
+        <input id="pn" data-i18n-placeholder="iot.ports_ph" style="width:130px">
+        <input id="psrc" data-i18n-placeholder="iot.src_ph" style="width:140px">
+        <input id="ptag" data-i18n-placeholder="iot.col.tag" style="width:110px">
+        <button class="b primary" onclick="addPorts()" data-i18n="common.add"></button>
+        <span class="msg" id="pmsg"></span>
+      </div>
+    </div>
+  </div>
+
+  <h2 data-i18n="iot.devices_h"></h2>
+  <div class="panel"><div class="tblwrap"><table>
+    <thead><tr><th data-i18n="iot.col.device"></th><th>IP</th><th data-i18n="iot.col.connection"></th><th data-i18n="iot.col.dropped"></th><th data-i18n="iot.col.learning"></th></tr></thead>
+    <tbody id="devs"></tbody></table></div>
+    <div class="note" data-i18n="iot.learn_note"></div>
+  </div>
+
+  <h2 data-i18n="iot.audit_h"></h2>
+  <div class="panel"><div class="tblwrap"><table>
+    <thead><tr><th data-i18n="iot.col.when"></th><th data-i18n="iot.col.who"></th><th data-i18n="iot.col.action"></th><th data-i18n="iot.col.detail"></th></tr></thead>
+    <tbody id="audit"></tbody></table></div></div>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+function esc(s){return (s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+let S=null, skew=0, learnData={};
+const now=()=>Date.now()/1000+skew;
+const mmss=s=>{s=Math.max(0,Math.floor(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")};
+const dt=ts=>ts? new Date(ts*1000).toLocaleString(I18N.locale,{day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit"}) : "–";
+function msg(id,tx,ok){ const e=$(id); e.textContent=tx; e.className="msg "+(ok?"ok":"err"); if(ok) setTimeout(()=>e.textContent="",4000); }
+async function api(url,opt){
+  const r=await fetch(url,opt); let j=null; try{ j=await r.json(); }catch(e){}
+  if(r.status===401 && url==="/api/iot/state"){ location.href="/login"; throw new Error("login"); }
+  if(!r.ok) throw new Error((j&&j.detail)||("HTTP "+r.status));
+  return j;
+}
+const post=(url,body)=>api(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})});
+const del=url=>api(url,{method:"DELETE"});
+const canWrite=()=>S&&S.credentials.active;
+const dis=()=>canWrite()? "" : `disabled title="${esc(t("iot.need_creds"))}"`;
+
+/* ---- credentials (shared with /updates) ---- */
+function renderCred(){
+  const c=S.credentials;
+  if(c.active){
+    $("#cred").innerHTML=`<div class="row"><span class="ok">✓ ${esc(t("iot.changes_as"))} <b>${esc(c.user)}</b></span>
+      <span class="dim">${esc(t("common.forgotten_in"))} <b id="cdown">${mmss(c.expires_at-now())}</b></span>
+      <button class="b" style="margin-left:auto" onclick="forget()">${esc(t("common.forget_now"))}</button></div>`;
+    return;
+  }
+  if($("#cu")) return;
+  $("#cred").innerHTML=`<div class="row"><span class="dim">${esc(t("iot.cred_hint"))}</span>
+    <input id="cu" value="admin" style="width:110px" autocomplete="off">
+    <input id="cp" type="password" placeholder="${esc(t("common.password"))}" style="width:180px" autocomplete="off">
+    <button class="b primary" id="cbtn" onclick="saveCred()">${esc(t("common.verify"))}</button><span class="msg" id="cmsg"></span></div>`;
+  $("#cp").addEventListener("keydown",e=>{ if(e.key==="Enter") saveCred(); });
+}
+async function saveCred(){
+  $("#cbtn").disabled=true;
+  try{ await post("/api/updates/credentials",{username:$("#cu").value,password:$("#cp").value}); $("#cred").innerHTML=""; load(); }
+  catch(e){ msg("#cmsg",e.message,false); $("#cbtn").disabled=false; }
+}
+async function forget(){ await del("/api/updates/credentials"); $("#cred").innerHTML=""; load(); }
+
+/* ---- helpers ---- */
+const devByIp=ip=>(S.devices||[]).find(d=>d.ip===ip);
+const devLabel=ip=>{ const d=devByIp(ip); return d? (d.hostname||d.comment||d.mac) : ip; };
+function baseDomain(d){
+  d=d.toLowerCase().replace(/\.$/,"");
+  const shared=["azure-devices.net","azurewebsites.net","windows.net","cloudapp.net","azureedge.net","trafficmanager.net",
+    "amazonaws.com","cloudfront.net","elasticbeanstalk.com","googleapis.com","appspot.com","firebaseio.com",
+    "herokuapp.com","akamaized.net","edgekey.net","cloudflare.net","digitaloceanspaces.com"];
+  if(shared.some(s=>d.endsWith("."+s))) return d;
+  const p=d.split("."); if(p.length<=2) return d;
+  if(["co","com","net","org","gov","ac","edu"].includes(p[p.length-2]) && p[p.length-1].length===2) return p.slice(-3).join(".");
+  return p.slice(-2).join(".");
+}
+function basePorts(){
+  const r=(S.state&&S.state.rules||[]).find(x=>x.base); if(!r) return new Set();
+  return new Set(String(r.dst_port||"").split(",").map(x=>x.trim()));
+}
+
+/* ---- render ---- */
+function renderBanners(){
+  let h="";
+  if(S.error) h+=`<div class="banner">⚠ ${esc(t("iot.state_error",{router:S.router,error:S.error}))}</div>`;
+  const st=S.state||{};
+  if(st.learn_logging && !(S.learn||[]).length)
+    h+=`<div class="banner">⚠ ${esc(t("iot.leftover_logging"))}
+      <button class="b danger" ${dis()} onclick="cleanupLogging()">${esc(t("iot.turn_off"))}</button></div>`;
+  $("#banners").innerHTML=h;
+}
+function renderDrops(){
+  const d=(S.state&&S.state.drops)||[], bp=basePorts();
+  $("#drops").innerHTML = d.length? d.map(x=>{
+    const names=S.dst_names[x.dst]||[];
+    const dom=names[0]? baseDomain(names[0]) : null;
+    const allowedPort = x.proto==="tcp" && bp.has(String(x.port));
+    return `<tr>
+      <td><span class="name">${esc(devLabel(x.src))}</span><div class="sub">${esc(x.src)}</div></td>
+      <td>${esc(x.dst)}<div class="sub">${esc(names.join(", ")||t("iot.name_unknown"))}</div></td>
+      <td>${esc(x.proto)}/${esc(x.port||"–")}${x.port&&!allowedPort? ' <span class="tag">'+esc(t("iot.port_outside"))+'</span>':""}</td>
+      <td class="n">${x.count}</td><td class="sub">${esc(x.last||"")}</td>
+      <td><div class="row">
+        ${dom? `<button class="b" ${dis()} data-act="dom" data-v="${esc(dom)}" data-tag="${esc(devLabel(x.src))}">${esc(t("iot.allow_x",{x:dom}))}</button>`:""}
+        <button class="b" ${dis()} data-act="ip" data-v="${esc(x.dst)}" data-tag="${esc(devLabel(x.src))}">${esc(t("iot.allow_ip"))}</button>
+        ${x.port&&!allowedPort? `<button class="b" ${dis()} data-act="port" data-v="${esc(x.proto)}:${esc(x.port)}" data-src="${esc(x.src)}" data-tag="${esc(devLabel(x.src))}">${esc(t("iot.allow_port",{port:x.port}))}</button>`:""}
+      </div></td></tr>`;
+  }).join("") : `<tr><td colspan="6" class="ok">${esc(t("iot.nothing_dropped"))} ✓</td></tr>`;
+  $("#dropnote").textContent=t("iot.drops_note",{prefix:S.cfg.drop_prefix});
+}
+function renderWhitelist(){
+  const st=S.state||{domains:[],addresses:[],rules:[]};
+  const tagOf=c=>String(c||"").replace(/^IoT whitelist\s*/,"");
+  $("#domains").innerHTML = st.domains.length? st.domains.map(d=>`<tr>
+    <td><span class="name">${esc(d.name)}</span>${d.match_subdomain? ' <span class="tag">+ '+esc(t("iot.subdomains"))+'</span>':""}${d.disabled?' <span class="tag">'+esc(t("iot.disabled"))+'</span>':""}</td>
+    <td class="sub">${esc(tagOf(d.comment))}</td>
+    <td><button class="b del" ${dis()} data-del="/api/iot/domains/${encodeURIComponent(d.id)}" data-what="${esc(t("iot.what_domain",{x:d.name}))}">${esc(t("common.remove"))}</button></td></tr>`).join("")
+    : `<tr><td colspan="3" class="dim">${esc(t("iot.no_domains"))}</td></tr>`;
+  const stat=st.addresses.filter(a=>!a.dynamic), dyn=st.addresses.filter(a=>a.dynamic);
+  $("#addrs").innerHTML = stat.length? stat.map(a=>`<tr><td>${esc(a.address)}</td><td class="sub">${esc(a.comment||"")}</td>
+    <td><button class="b del" ${dis()} data-del="/api/iot/addresses/${encodeURIComponent(a.id)}" data-what="IP ${esc(a.address)}">${esc(t("common.remove"))}</button></td></tr>`).join("")
+    : `<tr><td colspan="3" class="dim">${esc(t("iot.no_addrs"))}</td></tr>`;
+  $("#dynsum").textContent=tn("iot.dyn_allowed",dyn.length);
+  $("#dynlist").innerHTML=dyn.map(a=>`${esc(a.address)} <span class="dim">${esc(a.comment||"")} ${a.timeout? "· "+esc(t("iot.expires_in",{v:a.timeout})):""}</span>`).join("<br>")||"–";
+  const rules=st.rules.filter(r=>!r.drop && !r.temp);
+  $("#rules").innerHTML = rules.length? rules.map(r=>`<tr>
+    <td>${esc(r.comment)}${r.disabled?' <span class="tag">'+esc(t("iot.disabled"))+'</span>':""}</td>
+    <td>${esc(r.protocol||"")} ${esc(r.dst_port||t("iot.all"))}</td><td class="sub">${esc(r.src_address||t("iot.whole_net"))}</td>
+    <td class="n">${esc(r.packets??"")}</td>
+    <td>${r.base? '<span class="tag">'+esc(t("iot.base"))+'</span>' : `<button class="b del" ${dis()} data-del="/api/iot/rules/${encodeURIComponent(r.id)}" data-what="${esc(t("iot.what_rule",{x:r.comment}))}">${esc(t("common.remove"))}</button>`}</td></tr>`).join("")
+    : `<tr><td colspan="5" class="dim">${esc(t("iot.no_rules"))}</td></tr>`;
+}
+function renderDevs(){
+  const drops=(S.state&&S.state.drops)||[];
+  const learning=new Map((S.learn||[]).map(l=>[l.ip,l]));
+  $("#devs").innerHTML = S.devices.length? S.devices.map(d=>{
+    const n=drops.filter(x=>x.src===d.ip).reduce((a,x)=>a+x.count,0);
+    const l=learning.get(d.ip);
+    return `<tr>
+      <td><span class="name">${esc(d.hostname||d.comment||d.mac)}</span><div class="sub">${esc(d.mac)}${d.vendor? " · "+esc(d.vendor):""}${d.comment&&d.hostname? " · "+esc(d.comment):""}</div></td>
+      <td>${esc(d.ip)}${d.lease_static? ' <span class="tag">'+esc(t("iot.static"))+'</span>':""}</td>
+      <td class="sub">${d.conn==="lease-only"? "offline" : esc((d.device||"")+" "+(d.ssid||d.interface||""))}</td>
+      <td class="n">${n? `<span class="warn">${n}</span>`:"–"}</td>
+      <td>${l? `<span class="warn">${esc(t("iot.learning_left",{v:mmss(l.until-now())}))}</span>`
+        : `<div class="row"><select id="lm-${esc(d.ip)}"><option>10</option><option selected>20</option><option>30</option><option>60</option></select>
+           <button class="b danger" ${dis()} data-learn="${esc(d.ip)}" data-tag="${esc(d.hostname||d.comment||d.mac)}">${esc(t("iot.learn"))}</button></div>`}</td></tr>`;
+  }).join("") : `<tr><td colspan="5" class="dim">${esc(t("iot.no_devices",{subnet:S.cfg.subnet}))}</td></tr>`;
+}
+function renderLearn(){
+  const ls=S.learn||[];
+  $("#learnbox").innerHTML=ls.map(l=>{
+    const d=learnData[l.ip]||{}, sug=d.suggestions||[];
+    return `<div class="learn"><div class="hd">
+      <b>${esc(t("iot.learning_of",{x:devLabel(l.ip)}))}</b><span class="dim">${esc(l.ip)} · ${esc(t("iot.tag_x",{x:l.tag}))}</span>
+      <span class="warn">${esc(t("iot.full_internet_left",{v:mmss(l.until-now())}))}</span>
+      <button class="b" style="margin-left:auto" ${dis()} data-stop="${esc(l.ip)}">${esc(t("iot.stop_learning"))}</button></div>
+      <h3>${esc(t("iot.suggested"))}</h3>
+      ${sug.length? `<table><tbody>`+sug.map(s=>`<tr><td class="name">${esc(s.domain)}</td><td class="sub">${esc(s.seen.join(", "))}</td>
+        <td><button class="b primary" ${dis()} data-act="dom" data-v="${esc(s.domain)}" data-tag="${esc(l.tag)}" data-sub="1">${esc(t("iot.allow"))}</button></td></tr>`).join("")+`</tbody></table>`
+        : `<div class="dim">${esc(t("iot.nothing_yet"))}</div>`}
+      <details style="margin-top:8px"><summary>${esc(t("iot.outgoing",{n:(d.connections||[]).length}))}</summary>
+        <div class="sub" style="line-height:1.6;margin-top:4px">${(d.connections||[]).map(c=>`${esc(c.proto)} ${esc(c.dst)}:${esc(c.port)} <span class="dim">${esc((d.dst_names[c.dst]||[]).join(", "))}</span>`).join("<br>")||"–"}</div></details>
+      </div>`;
+  }).join("");
+}
+function renderAudit(){
+  $("#audit").innerHTML = S.audit.length? S.audit.map(a=>`<tr><td class="sub">${dt(a.ts)}</td><td class="sub">${esc(a.actor)}</td>
+    <td class="${a.ok?"":"err"}">${esc(a.action)}</td><td>${esc(a.detail)}</td></tr>`).join("")
+    : `<tr><td colspan="4" class="dim">${esc(t("iot.no_audit"))}</td></tr>`;
+}
+
+/* ---- actions ---- */
+async function addDomain(dom,sub,tag){
+  const d=dom??$("#dn").value, s=sub??$("#dsub").checked, tg=tag??$("#dtag").value;
+  try{ await post("/api/iot/domains",{domain:d,match_subdomain:s,tag:tg}); if(dom==null){$("#dn").value="";} msg("#dmsg",t("iot.added_x",{x:d}),true); load(); }
+  catch(e){ msg("#dmsg",e.message,false); if(dom!=null) alert(e.message); }
+}
+async function addAddr(addr,tag){
+  const a=addr??$("#an").value, tg=tag??$("#atag").value;
+  try{ await post("/api/iot/addresses",{address:a,tag:tg}); if(addr==null) $("#an").value=""; msg("#amsg",t("iot.added_x",{x:a}),true); load(); }
+  catch(e){ msg("#amsg",e.message,false); if(addr!=null) alert(e.message); }
+}
+async function addPorts(proto,ports,src,tag){
+  const b={proto:proto??$("#pp").value, ports:ports??$("#pn").value, src:src??$("#psrc").value, tag:tag??$("#ptag").value};
+  try{ await post("/api/iot/ports",b); msg("#pmsg",t("iot.added"),true); load(); }
+  catch(e){ msg("#pmsg",e.message,false); if(proto!=null) alert(e.message); }
+}
+async function cleanupLogging(){ try{ await post("/api/iot/cleanup-logging"); load(); }catch(e){ alert(e.message); } }
+
+document.addEventListener("click",async e=>{
+  const b=e.target.closest("button"); if(!b||b.disabled) return;
+  if(b.dataset.del){
+    if(!confirm(t("iot.confirm_remove",{what:b.dataset.what}))) return;
+    try{ await del(b.dataset.del); load(); }catch(err){ alert(err.message); }
+  } else if(b.dataset.act==="dom"){
+    const d=prompt(t("iot.prompt_domain"), b.dataset.v); if(!d) return;
+    const sub=b.dataset.sub? true : confirm(t("iot.confirm_subdomains",{d}));
+    addDomain(d, sub, b.dataset.tag);
+  } else if(b.dataset.act==="ip"){
+    if(!confirm(t("iot.confirm_ip",{ip:b.dataset.v}))) return;
+    addAddr(b.dataset.v, b.dataset.tag);
+  } else if(b.dataset.act==="port"){
+    const [p,port]=b.dataset.v.split(":");
+    if(!confirm(t("iot.confirm_port",{proto:p,port,src:b.dataset.src}))) return;
+    addPorts(p, port, b.dataset.src, b.dataset.tag);
+  } else if(b.dataset.learn){
+    const ip=b.dataset.learn, m=$("#lm-"+CSS.escape(ip)).value;
+    if(!confirm(t("iot.confirm_learn",{name:b.dataset.tag,ip,min:m}))) return;
+    try{ await post("/api/iot/learn",{ip,minutes:+m,tag:b.dataset.tag}); load(); }catch(err){ alert(err.message); }
+  } else if(b.dataset.stop){
+    try{ await del("/api/iot/learn/"+encodeURIComponent(b.dataset.stop)); delete learnData[b.dataset.stop]; load(); }catch(err){ alert(err.message); }
+  }
+});
+
+/* ---- loop ---- */
+async function load(){
+  try{
+    S=await api("/api/iot/state"); skew=S.now-Date.now()/1000;
+    renderCred(); renderBanners(); renderDrops(); renderWhitelist(); renderDevs(); renderLearn(); renderAudit();
+    $("#meta").textContent=`router ${S.router} · ${S.cfg.subnet} · `+new Date().toLocaleTimeString(I18N.locale);
+  }catch(e){ if(e.message!=="login") $("#meta").innerHTML='<span class="err">'+esc(e.message)+'</span>'; }
+}
+async function loadLearn(){
+  for(const l of (S&&S.learn)||[]){
+    try{ learnData[l.ip]=await api("/api/iot/learn/"+encodeURIComponent(l.ip)); }catch(e){}
+  }
+  if(S&&(S.learn||[]).length) renderLearn();
+}
+I18N.ready.then(()=>{
+  setInterval(()=>{ if(!S) return;
+    if(S.credentials.active && $("#cdown")) $("#cdown").textContent=mmss(S.credentials.expires_at-now());
+  },1000);
+  load(); setInterval(load,10000); setInterval(loadLearn,5000);
+});
+</script>
+</body>
+</html>

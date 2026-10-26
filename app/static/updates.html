@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="title.updates">mktk-map</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#111823; --panel2:#0e141d; --line:#1e2a3a;
+    --txt:#c9d6e3; --dim:#5f7288; --mono:'JetBrains Mono','Cascadia Code','Fira Code',ui-monospace,Consolas,monospace;
+    --ok:#3ddc84; --warn:#ffb020; --err:#ff5d5d; --wifi:#4db8ff; --eth:#b08cff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:13px}
+  header.top{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  header.top h1{font-size:15px;margin:0;letter-spacing:2px;font-weight:600}
+  header.top h1 b{color:var(--ok)}
+  header.top h1 span{color:var(--dim);font-weight:400}
+  .hbtn{border:1px solid var(--line);color:var(--dim);text-decoration:none;background:none;font-family:inherit;
+    font-size:12px;padding:5px 10px;border-radius:4px;cursor:pointer}
+  .hbtn:hover{color:var(--txt);border-color:var(--dim)}
+  #meta{color:var(--dim);font-size:11px;margin-left:auto}
+  main{padding:20px;max-width:1300px;margin:0 auto}
+  h2{font-size:11px;letter-spacing:3px;color:var(--dim);text-transform:uppercase;margin:26px 0 10px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px}
+  .dim{color:var(--dim)}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .err{color:var(--err)}
+  input{background:var(--panel2);border:1px solid var(--line);color:var(--txt);font-family:inherit;
+    font-size:12px;padding:6px 9px;border-radius:4px;outline:none}
+  input:focus{border-color:var(--wifi)}
+  button.b{background:none;border:1px solid var(--line);color:var(--txt);font-family:inherit;
+    font-size:11px;padding:5px 11px;border-radius:4px;cursor:pointer;white-space:nowrap}
+  button.b:hover:not(:disabled){border-color:var(--dim)}
+  button.b.primary{border-color:var(--ok);color:var(--ok)}
+  button.b.danger{border-color:#4a2a10;color:var(--warn)}
+  button.b.danger:hover:not(:disabled){border-color:var(--warn)}
+  button.b:disabled{opacity:.35;cursor:not-allowed}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .note{font-size:11px;color:var(--dim);margin-top:8px;line-height:1.5}
+  .verify{margin-top:10px;font-size:11.5px}
+  .verify div{padding:1px 0}
+
+  /* running job */
+  #job.panel{border-color:var(--warn)}
+  #job .head{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
+  #job .dev{font-size:15px;font-weight:700}
+  #job .state{font-size:14px;color:var(--warn);font-weight:700}
+  .spin{display:inline-block;width:9px;height:9px;border:2px solid var(--warn);border-right-color:transparent;
+    border-radius:50%;animation:sp 1s linear infinite;margin-right:6px;vertical-align:-1px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  /* device table */
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{color:var(--dim);font-size:10px;letter-spacing:1px;text-transform:uppercase;text-align:left;
+    padding:6px 8px;border-bottom:1px solid var(--line);font-weight:400;white-space:nowrap}
+  td{padding:8px;border-bottom:1px solid var(--panel2);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  .tblwrap{overflow-x:auto}
+  .led{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+  .led.ok{background:var(--ok);box-shadow:0 0 5px var(--ok)}
+  .led.err{background:var(--err);box-shadow:0 0 5px var(--err)}
+  .led.busy{background:var(--warn);box-shadow:0 0 5px var(--warn)}
+  .name{font-weight:700}
+  .badge{display:inline-block;padding:1px 7px;border-radius:3px;font-size:10.5px;font-weight:700}
+  .badge.uptodate{background:#12331f;color:var(--ok)}
+  .badge.newver{background:#3a2a08;color:var(--warn)}
+  .badge.unknown{background:#1a2330;color:var(--dim)}
+  .acts{display:flex;gap:6px;flex-wrap:wrap}
+
+  /* log / history */
+  .log{margin-top:10px;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:8px 10px;
+    font-size:11.5px;max-height:340px;overflow:auto}
+  .log div{display:grid;grid-template-columns:72px 150px 1fr;gap:10px;padding:1px 0}
+  .log .t{color:var(--dim)}
+  .log .s{font-weight:700}
+  .log .s.error,.log .s.chyba{color:var(--err)} .log .s.done,.log .s.verified,.log .s.hotovo,.log .s.ověřeno{color:var(--ok)}
+  .hist{border-bottom:1px solid var(--panel2);padding:8px 0;cursor:pointer}
+  .hist:last-child{border-bottom:none}
+  .hist .h{display:grid;grid-template-columns:50px 130px 140px 180px 1fr auto;gap:10px;align-items:baseline}
+  .hist .log{display:none;cursor:default}
+  .hist.open .log{display:block}
+  .st{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:3px}
+  .st.ok{background:#12331f;color:var(--ok)} .st.failed{background:#3a1212;color:var(--err)}
+  .st.warning{background:#3a2a08;color:var(--warn)} .st.running{background:#3a2a08;color:var(--warn)}
+  .st.interrupted{background:#1a2330;color:var(--dim)}
+  @media (max-width:800px){
+    .hist .h{grid-template-columns:40px 1fr auto}
+    .hist .h .c3,.hist .h .c4,.hist .h .c5{display:none}
+    .log div{grid-template-columns:60px 1fr}
+    .log .m{grid-column:1/3}
+  }
+</style>
+<link rel="icon" href="/static/logo.svg" type="image/svg+xml">
+<script src="/static/i18n.js"></script>
+</head>
+<body>
+<header class="top">
+  <img src="/static/logo.svg" width="64" height="64" alt="">
+  <h1>MKTK<b>·</b>MAP <span>/ <span data-i18n="upd.title"></span></span></h1>
+  <a class="hbtn" href="/" data-i18n="nav.back"></a>
+  <span id="meta" data-i18n="common.loading"></span>
+  <button class="hbtn" onclick="logout()" data-i18n="common.logout"></button>
+</header>
+<main>
+  <h2 data-i18n="upd.login_h"></h2>
+  <div class="panel" id="cred"></div>
+
+  <div id="jobwrap" style="display:none">
+    <h2 data-i18n="upd.running_h"></h2>
+    <div class="panel" id="job"></div>
+  </div>
+
+  <h2 data-i18n="upd.devices_h"></h2>
+  <div class="panel">
+    <div class="row" style="margin-bottom:8px">
+      <span id="latestinfo" class="dim"></span>
+      <button class="b" style="margin-left:auto" onclick="refreshLatest(this)" data-i18n="upd.check_versions"></button>
+    </div>
+    <div class="tblwrap"><table>
+      <thead><tr><th data-i18n="upd.col.device"></th><th data-i18n="upd.col.state"></th><th>RouterOS</th><th data-i18n="upd.col.available"></th><th>firmware</th><th data-i18n="upd.col.actions"></th></tr></thead>
+      <tbody id="devs"></tbody>
+    </table></div>
+    <div class="note" data-i18n-html="upd.note"></div>
+  </div>
+
+  <h2 data-i18n="upd.history_h"></h2>
+  <div class="panel" id="hist"></div>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+function esc(s){return (s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+const ACT=a=>tOr("job.action."+a,a);
+const STS=s=>tOr("job.status."+s,s);
+const STATE=s=>tOr("job.state."+s,s);   // older records have a Czech state -> shown as they are
+let st=null, clockSkew=0, openHist=new Set(), credDraft=null, verifyRes=null;
+
+function tm(ts){ return ts? new Date(ts*1000).toLocaleTimeString(I18N.locale) : "–"; }
+function dt(ts){ return ts? new Date(ts*1000).toLocaleString(I18N.locale,{day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"}) : "–"; }
+function now(){ return Date.now()/1000 + clockSkew; }
+function dur(s){ s=Math.max(0,Math.round(s)); const m=Math.floor(s/60), x=s%60;
+  return m>=60? Math.floor(m/60)+" h "+(m%60)+" min" : (m? m+" min "+x+" s" : x+" s"); }
+function mmss(s){ s=Math.max(0,Math.floor(s)); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
+
+async function api(url,opt){
+  const r=await fetch(url,opt);
+  if(r.status===401 && url==="/api/updates/state"){ location.href="/login"; throw new Error("login"); }
+  let j=null; try{ j=await r.json(); }catch(e){}
+  if(!r.ok) throw new Error((j&&j.detail)||("HTTP "+r.status));
+  return j;
+}
+
+/* ---------- credentials ---------- */
+function renderCred(){
+  const c=st.credentials;
+  if(c.active){
+    const left=c.expires_at-now();
+    $("#cred").innerHTML=`<div class="row">
+      <span class="ok">✓ ${esc(t("upd.logged_as"))} <b>${esc(c.user)}</b></span>
+      <span class="dim">${esc(t("upd.entered_at",{time:tm(c.set_at)}))} · ${esc(t("common.forgotten_in"))} <b id="cdown">${mmss(left)}</b></span>
+      <button class="b" style="margin-left:auto" onclick="forget()">${esc(t("common.forget_now"))}</button></div>
+      ${verifyHtml()}
+      <div class="note">${esc(t("upd.cred_note_active"))}</div>`;
+    return;
+  }
+  if($("#cu")) return;   // the form is already rendered — don't overwrite what is being typed
+  $("#cred").innerHTML=`<div class="row">
+      <input id="cu" placeholder="${esc(t("common.username"))}" value="admin" autocomplete="off" style="width:140px">
+      <input id="cp" type="password" placeholder="${esc(t("common.mikrotik_password"))}" autocomplete="off" style="width:220px">
+      <button class="b primary" id="cbtn" onclick="saveCred()">${esc(t("upd.verify_hold"))}</button>
+      <span id="cmsg" class="err" style="font-size:11px"></span></div>
+    ${verifyHtml()}
+    <div class="note">${esc(t("upd.cred_note"))}</div>`;
+  $("#cp").addEventListener("keydown",e=>{ if(e.key==="Enter") saveCred(); });
+}
+function verifyHtml(){
+  if(!verifyRes) return "";
+  return `<div class="verify">`+verifyRes.map(r=>`<div>${r.ok? '<span class="ok">✓</span>':'<span class="err">✗</span>'}
+    ${esc(r.device)} ${r.ok? '<span class="dim">'+esc(r.identity||"")+'</span>' : '<span class="err">'+esc(r.error)+'</span>'}</div>`).join("")+`</div>`;
+}
+async function saveCred(){
+  const btn=$("#cbtn"); btn.disabled=true; btn.textContent=t("common.verifying"); $("#cmsg").textContent="";
+  try{
+    const j=await api("/api/updates/credentials",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({username:$("#cu").value,password:$("#cp").value})});
+    verifyRes=j.results; $("#cp").value="";
+    $("#cred").innerHTML=""; await load();
+  }catch(e){ $("#cmsg").textContent=e.message; btn.disabled=false; btn.textContent=t("upd.verify_hold"); }
+}
+async function forget(){
+  await api("/api/updates/credentials",{method:"DELETE"});
+  verifyRes=null; $("#cred").innerHTML=""; await load();
+}
+
+/* ---------- running job ---------- */
+function jobLogHtml(log){
+  return `<div class="log">`+log.map(l=>`<div><span class="t">${tm(l.ts)}</span>
+    <span class="s ${esc(l.state)}">${esc(STATE(l.state))}</span><span class="m">${esc(l.msg)}</span></div>`).join("")+`</div>`;
+}
+function renderJob(){
+  const j=st.job;
+  if(!j){ $("#jobwrap").style.display="none"; return; }
+  const h=st.history.find(x=>x.id===j.id) || {log:[],state:"",started:now()};
+  $("#jobwrap").style.display="";
+  $("#job").innerHTML=`<div class="head">
+      <span class="dev">${esc(j.device)}</span>
+      <span>${esc(ACT(j.action))} · ${esc(t("upd.job_n",{id:j.id}))}</span>
+      <span class="state"><span class="spin"></span>${esc(STATE(h.state))}</span>
+      <span class="dim" style="margin-left:auto">${esc(t("upd.started_running",{started:dt(h.started),dur:dur(now()-h.started)}))}</span></div>
+    <div class="dim" style="font-size:11px;margin-top:4px">${esc(h.started_by||"")}
+      ${h.from_version? " · "+esc(t("upd.from",{v:h.from_version})):""}${h.to_version? " · "+esc(t("upd.target",{v:h.to_version})):""}</div>
+    ${jobLogHtml(h.log)}`;
+  const lg=$("#job .log"); lg.scrollTop=lg.scrollHeight;
+}
+
+/* ---------- devices ---------- */
+function devState(d){
+  const j=st.job;
+  if(j && j.device===d.name){
+    const h=st.history.find(x=>x.id===j.id)||{};
+    return `<span class="led busy"></span><span class="warn">${esc(h.state? STATE(h.state) : t("upd.job"))}</span>`;
+  }
+  if(d.reachable){
+    const r=d.resource||{};
+    return `<span class="led ok"></span>online<div class="dim" style="font-size:11px">uptime ${esc(r.uptime||"–")} · ${esc(t("upd.data_at",{time:tm(d.polled_at)}))}</div>`;
+  }
+  return `<span class="led err"></span><span class="err">${esc(t("common.unreachable"))}</span>
+    <div class="dim" style="font-size:11px">${esc(t("upd.since",{time:tm(d.offline_since)}))} (${dur(now()-(d.offline_since||now()))})</div>
+    <div class="err" style="font-size:10.5px;word-break:break-all">${esc(d.error||"")}</div>`;
+}
+function renderDevs(){
+  const creds=st.credentials.active, busy=!!st.job;
+  const why = !creds? t("upd.why_creds") : (busy? t("upd.why_busy") : "");
+  const offTxt=t("upd.why_offline");
+  $("#devs").innerHTML=st.devices.map(d=>{
+    const r=d.resource||{}, rb=d.routerboard||{}, lt=d.latest||{}, u=d.update||{};
+    const ver=(r.version||"").split(" ")[0]||u.installed||"–";
+    const avail = !lt.version? `<span class="badge unknown">?</span>`
+      : d.update_available? `<span class="badge newver">${esc(lt.version)}</span>`
+      : `<span class="badge uptodate">${esc(t("common.up_to_date"))}</span>`;
+    const fw = rb.firmware? (d.fw_available? `${esc(rb.firmware)} → <span class="badge newver">${esc(rb.upgrade_firmware)}</span>` : `${esc(rb.firmware)} <span class="dim">${esc(t("common.up_to_date"))}</span>`) : "–";
+    const off = !d.reachable;
+    const dis = (extra)=> (why||extra)? `disabled title="${esc(why||extra)}"` : "";
+    return `<tr>
+      <td><span class="name">${esc(d.identity||d.name)}</span><div class="dim" style="font-size:11px">${esc(d.host)} · ${esc(d.role)}</div></td>
+      <td>${devState(d)}</td>
+      <td>${esc(ver)}<div class="dim" style="font-size:11px">${esc(lt.channel||u.channel||"")}</div></td>
+      <td>${avail}</td>
+      <td>${fw}</td>
+      <td><div class="acts">
+        <button class="b" ${dis(off?offTxt:"")} data-dev="${esc(d.name)}" data-act="check">${esc(t("upd.btn_check"))}</button>
+        ${d.update_available? `<button class="b danger" ${dis(off?offTxt:"")} data-dev="${esc(d.name)}" data-act="install">${esc(t("upd.btn_install",{v:lt.version}))}</button>`:""}
+        ${d.fw_available? `<button class="b danger" ${dis(off?offTxt:"")} data-dev="${esc(d.name)}" data-act="firmware">firmware ${esc(rb.upgrade_firmware)}</button>`:""}
+      </div></td></tr>`;
+  }).join("");
+  const ls=Object.entries(st.latest||{}).map(([ch,v])=>`${esc(ch)}: <b>${esc(v.version||"?")}</b>`
+    +(v.error? ` <span class="err" title="${esc(v.error)}">(${esc(t("common.error"))})</span>`:"")
+    +` <span class="dim">${esc(t("upd.checked_at",{time:v.fetched_at? dt(v.fetched_at):"–"}))}</span>`).join(" · ");
+  $("#latestinfo").innerHTML = ls? esc(t("upd.latest_ros"))+" — "+ls : esc(t("upd.latest_never"));
+}
+async function startJob(name,action){
+  const d=st.devices.find(x=>x.name===name)||{}, lt=d.latest||{}, rb=d.routerboard||{};
+  const ver=((d.resource||{}).version||"").split(" ")[0];
+  const nm=d.identity||name;
+  let msg;
+  if(action==="check") msg=t("upd.confirm_check",{name:nm});
+  else if(action==="install") msg=t("upd.confirm_install",{version:lt.version,name:nm,host:d.host,running:ver});
+  else msg=t("upd.confirm_fw",{cur:rb.firmware,new:rb.upgrade_firmware,name:nm,host:d.host});
+  if(action!=="check" && d.role!=="ap")
+    msg+="\n\n⚠ "+t("upd.confirm_outage",{name:nm,role:d.role});
+  if(!confirm(msg)) return;
+  try{ await api("/api/updates/jobs",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({device:name,action})}); await load(); }
+  catch(e){ alert(t("upd.not_started",{error:e.message})); }
+}
+async function refreshLatest(btn){
+  btn.disabled=true; btn.textContent=t("common.verifying");
+  try{ await api("/api/updates/refresh-latest",{method:"POST"}); await load(); }
+  catch(e){ alert(e.message); }
+  btn.disabled=false; btn.textContent=t("upd.check_versions");
+}
+
+$("#devs").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-act]"); if(b && !b.disabled) startJob(b.dataset.dev,b.dataset.act);
+});
+
+/* ---------- history ---------- */
+function renderHist(){
+  const hs=st.history.filter(h=>!(st.job && st.job.id===h.id));
+  $("#hist").innerHTML = hs.length? hs.map(h=>`<div class="hist ${openHist.has(h.id)?"open":""}" data-id="${h.id}">
+    <div class="h"><span class="dim">#${h.id}</span><span>${dt(h.started)}</span>
+      <span class="name c3">${esc(h.device)}</span><span class="c4">${esc(ACT(h.action))}</span>
+      <span class="dim c5">${h.from_version||h.to_version? esc(h.from_version||"?")+" → "+esc(h.to_version||"?") : ""}
+        ${h.finished? " · "+dur(h.finished-h.started):""}</span>
+      <span class="st ${esc(h.status)}">${esc(STS(h.status))}</span></div>
+    <div class="dim" style="font-size:10.5px;margin-top:2px">${esc(h.started_by||"")}${h.error? ' · <span class="err">'+esc(h.error)+'</span>':""}</div>
+    ${jobLogHtml(h.log)}</div>`).join("") : `<span class="dim">${esc(t("upd.no_history"))}</span>`;
+}
+$("#hist").addEventListener("click",e=>{
+  if(e.target.closest(".log")) return;
+  const el=e.target.closest(".hist"); if(!el) return;
+  const id=+el.dataset.id; openHist.has(id)? openHist.delete(id) : openHist.add(id);
+  el.classList.toggle("open");
+});
+
+/* ---------- loop ---------- */
+async function load(){
+  try{
+    st=await api("/api/updates/state");
+    clockSkew = st.now - Date.now()/1000;
+    renderCred(); renderJob(); renderDevs(); renderHist();
+    $("#meta").textContent=t("common.updated_at",{time:new Date().toLocaleTimeString(I18N.locale)});
+  }catch(e){ if(e.message!=="login") $("#meta").innerHTML='<span class="err">'+esc(t("upd.server_down",{error:e.message}))+'</span> '+esc(t("upd.server_down_hint")); }
+}
+async function logout(){ await fetch("/api/logout",{method:"POST"}); location.href="/login"; }
+I18N.ready.then(()=>{
+  setInterval(()=>{ if(st && st.credentials.active && $("#cdown")) {
+    const left=st.credentials.expires_at-now(); $("#cdown").textContent=mmss(left);
+    if(left<=0) load(); } },1000);
+  load(); setInterval(load, 2000);
+});
+</script>
+</body>
+</html>

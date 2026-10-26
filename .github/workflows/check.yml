@@ -1,0 +1,50 @@
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Compile Python sources
+        run: python -m compileall -q app tools
+      - name: Check translations
+        run: python tools/check_i18n.py
+      - name: Check locale files are valid JSON
+        run: for f in app/locales/*.json; do python -m json.tool "$f" > /dev/null || exit 1; done
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build image
+        run: docker build -t mktk-map:ci .
+      - name: Smoke test (starts, answers, runs unprivileged, can write its data)
+        run: |
+          cp config.example.yaml "$RUNNER_TEMP/config.yaml"
+          docker run -d --name mktk -p 8080:8080 \
+            -e APP_USER=ci -e APP_PASS_HASH=x -e PROXY_SECRET=ci -e MIKROTIK_PASS=x \
+            -v "$RUNNER_TEMP/config.yaml:/config/config.yaml" mktk-map:ci
+          for i in $(seq 1 30); do
+            curl -sf -H "X-Mktk-Proxy: ci" http://127.0.0.1:8080/api/i18n > /dev/null && break
+            sleep 1
+          done
+          curl -sf -H "X-Mktk-Proxy: ci" http://127.0.0.1:8080/api/i18n > /dev/null
+          test "$(docker exec mktk stat -c %u /proc/1)" = "10001"
+          docker exec -u app mktk sh -c 'touch /config/config.yaml.tmp && rm /config/config.yaml.tmp && test -w /data/mktk.db'
+      - name: Container log
+        if: always()
+        run: docker logs mktk || true

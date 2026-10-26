@@ -1,0 +1,45 @@
+services:
+  mktk-map:
+    build: .
+    container_name: mktk-map
+    restart: unless-stopped
+    ports:
+      # directly on 8080 only API tokens (Home Assistant); UI and login only via HTTPS (caddy)
+      # API_BIND in .env limits it to one address of the server (default: all)
+      - "${API_BIND:-0.0.0.0}:8080:8080"
+      # DNS log from the router (syslog) -> client queries on /connections
+      - "5514:5514/udp"
+    environment:
+      MIKROTIK_USER: ${MIKROTIK_USER:?set in .env}
+      MIKROTIK_PASS: ${MIKROTIK_PASS:?set in .env}
+      APP_USER: ${APP_USER:?set in .env}
+      APP_PASS_HASH: ${APP_PASS_HASH:?set in .env (python auth.py)}
+      PROXY_SECRET: ${PROXY_SECRET:?set in .env}
+      PUBLIC_URL: https://${MKTK_HOST:?set in .env}:8443
+      SYSLOG_TARGET: ${MKTK_HOST:?set in .env}
+      DNS_SYSLOG_PORT: "5514"
+      POLL_INTERVAL: "30"
+    volumes:
+      - ./config.yaml:/config/config.yaml
+      - mktk-data:/data
+
+  caddy:
+    image: caddy:2.8.4
+    container_name: mktk-caddy
+    restart: unless-stopped
+    depends_on:
+      - mktk-map
+    ports:
+      - "8443:8443"
+    environment:
+      MKTK_HOST: ${MKTK_HOST:?set in .env}
+      PROXY_SECRET: ${PROXY_SECRET:?set in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  mktk-data:
+  caddy-data:
+  caddy-config:

@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="title.topology">mktk-map</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#111823; --panel2:#0e141d; --line:#1e2a3a;
+    --txt:#c9d6e3; --dim:#5f7288; --mono:'JetBrains Mono','Cascadia Code','Fira Code',ui-monospace,Consolas,monospace;
+    --ok:#3ddc84; --warn:#ffb020; --err:#ff5d5d; --wifi:#4db8ff; --eth:#b08cff; --s1:#3a8ce0; --s2:#d9762f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:13px}
+  header.top{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  header.top h1{font-size:15px;margin:0;letter-spacing:2px;font-weight:600}
+  header.top h1 b{color:var(--ok)} header.top h1 span{color:var(--dim);font-weight:400}
+  .hbtn{border:1px solid var(--line);color:var(--dim);text-decoration:none;background:none;font-family:inherit;
+    font-size:12px;padding:5px 10px;border-radius:4px;cursor:pointer}
+  .hbtn:hover{color:var(--txt);border-color:var(--dim)}
+  #meta{color:var(--dim);font-size:11px;margin-left:auto}
+  main{padding:20px;max-width:1500px;margin:0 auto}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px}
+  .note{font-size:11px;color:var(--dim);margin-top:10px;line-height:1.5}
+  .banner{border:1px solid var(--warn);background:#2a2008;color:var(--warn);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;line-height:1.6}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:11px;color:var(--dim);margin-bottom:10px}
+  .legend i{display:inline-block;width:26px;height:0;border-top:2px solid var(--s1);vertical-align:middle;margin-right:6px}
+  .legend i.wl{border-top:2px dashed var(--wifi)} .legend i.cm{border-top:2px dotted var(--dim)}
+  .legend i.l2{border-top:2px dotted var(--warn)}
+  #wrap{overflow-x:auto}
+  #topo{display:block;margin:0 auto}
+  .edge{stroke:var(--s1);stroke-width:2;fill:none}
+  .edge.wireless{stroke:var(--wifi);stroke-dasharray:6 4}
+  .edge.capsman{stroke:var(--dim);stroke-dasharray:2 4}
+  .edge.l2{stroke:var(--warn);stroke-dasharray:2 4;opacity:.8}
+  .edge.fdb{stroke:var(--s1);stroke-dasharray:10 3;opacity:.75}
+  .legend i.fdb{border-top:2px dashed var(--s1);opacity:.75}
+  .port{fill:var(--dim);font-size:9.5px;font-family:var(--mono)}
+  .portbg{fill:var(--bg)}
+  .node rect{fill:var(--panel2);stroke:var(--line);stroke-width:1.5;rx:6}
+  .node.up rect{stroke:var(--ok)} .node.down rect{stroke:var(--err)} .node.ext rect{stroke:var(--line);stroke-dasharray:3 3}
+  .node .nm{fill:var(--txt);font-size:12px;font-weight:700;font-family:var(--mono)}
+  .node .sb{fill:var(--dim);font-size:9.5px;font-family:var(--mono)}
+  .node .cl{fill:var(--wifi);font-size:9.5px;font-family:var(--mono)}
+  .node:hover rect{fill:#13233a}
+  .edge.cl{stroke:var(--eth);stroke-width:1.2;opacity:.7}
+  .edge.cl.wifi{stroke:var(--wifi);stroke-dasharray:4 3}
+  .grp rect{fill:var(--panel2);stroke:var(--line);stroke-width:1;rx:5}
+  .grp .gh{fill:var(--txt);font-size:10.5px;font-weight:700;font-family:var(--mono)}
+  .grp .cn{fill:var(--txt);font-size:9.5px;font-family:var(--mono)}
+  .grp .cx{fill:var(--dim);font-size:9.5px;font-family:var(--mono)}
+  .grp .row:hover .cn{fill:var(--wifi)}
+  .legend i.cl{border-top:2px solid var(--eth)}
+  .legend label{margin-left:auto;cursor:pointer;color:var(--txt)}
+  .legend label input{vertical-align:middle;margin:0 6px 0 0}
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+  th{color:var(--dim);font-size:10px;letter-spacing:1px;text-transform:uppercase;text-align:left;
+    padding:6px 8px;border-bottom:1px solid var(--line);font-weight:400}
+  td{padding:5px 8px;border-bottom:1px solid var(--panel2)}
+  h2{font-size:11px;letter-spacing:3px;color:var(--dim);text-transform:uppercase;margin:24px 0 10px}
+  .dim{color:var(--dim)}
+</style>
+<link rel="icon" href="/static/logo.svg" type="image/svg+xml">
+<script src="/static/i18n.js"></script>
+</head>
+<body>
+<header class="top">
+  <img src="/static/logo.svg" width="64" height="64" alt="">
+  <h1>MKTK<b>·</b>MAP <span>/ <span data-i18n="topo.title"></span></span></h1>
+  <a class="hbtn" href="/" data-i18n="nav.back"></a>
+  <span id="meta" data-i18n="common.loading"></span>
+</header>
+<main>
+  <div id="banner"></div>
+  <div class="panel">
+    <div class="legend">
+      <span><i></i><span data-i18n="topo.legend.wired"></span></span>
+      <span><i class="wl"></i><span data-i18n="topo.legend.wireless"></span></span>
+      <span><i class="cm"></i><span data-i18n="topo.legend.capsman"></span></span>
+      <span><i class="fdb"></i><span data-i18n="topo.legend.fdb"></span></span>
+      <span><i class="l2"></i><span data-i18n="topo.legend.l2"></span></span>
+      <span><i class="cl"></i><span data-i18n="topo.legend.client"></span></span>
+      <label><input type="checkbox" id="showcl"><span data-i18n="topo.show_clients"></span></label>
+    </div>
+    <div id="wrap"><svg id="topo"></svg></div>
+    <div class="note" data-i18n="topo.note"></div>
+  </div>
+
+  <h2 data-i18n="topo.links_h"></h2>
+  <div class="panel"><table>
+    <thead><tr><th data-i18n="topo.col.a"></th><th data-i18n="topo.col.port"></th><th></th><th data-i18n="topo.col.port"></th><th data-i18n="topo.col.b"></th><th data-i18n="topo.col.type"></th></tr></thead>
+    <tbody id="links"></tbody></table></div>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+function esc(s){return (s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+const NW=158, NH=58, VGAP=62, HGAP=26, PAD=30;
+const GROW=13, GHEAD=22, GMAX=10;   // client group: row height, header height, max listed rows
+let T=null;
+
+function store(k,v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } }
+const nh=n=>n.h||NH;
+
+/* client groups: one wired group per device (port shown per row), one group per wireless interface */
+function clientGroups(devIds){
+  const hidden=new Set(T.hidden_clients||[]);
+  const groups=new Map();
+  for(const c of T.clients||[]){
+    // clients behind an inferred unmanaged switch are drawn under it
+    const dev=(T.client_parent||{})[c.mac]||c.device;
+    if(!devIds.has(dev) || hidden.has(c.mac)) continue;
+    const wifi=c.conn==="wifi", key=`grp:${dev}|${wifi? c.interface||"" : "eth"}`;
+    let g=groups.get(key);
+    if(!g){
+      g={id:key, group:true, device:dev, wifi, port:wifi? c.interface : null, ssid:wifi? c.ssid : null, clients:[]};
+      groups.set(key,g);
+    }
+    if(wifi && c.ssid && !g.ssid) g.ssid=c.ssid;
+    g.clients.push(c);
+  }
+  const name=c=>c.hostname||c.comment||c.vendor||c.mac;
+  for(const g of groups.values()){
+    g.clients.sort((a,b)=>g.wifi? (b.signal??-999)-(a.signal??-999) : (a.interface||"").localeCompare(b.interface||"",undefined,{numeric:true})||name(a).localeCompare(name(b)));
+    g.clients.forEach(c=>c.name=name(c));
+    g.rows=Math.min(g.clients.length, GMAX) + (g.clients.length>GMAX? 1:0);
+    g.h=GHEAD+g.rows*GROW+6;
+  }
+  return [...groups.values()];
+}
+
+/* tree layout: BFS from the root, children below their parent in parent order */
+function layout(nodes, edges, root){
+  const adj=new Map(nodes.map(n=>[n.id,[]]));
+  for(const e of edges){ if(adj.has(e.a)&&adj.has(e.b)){ adj.get(e.a).push(e.b); adj.get(e.b).push(e.a); } }
+  const level=new Map(), parent=new Map(), levels=[];
+  const visit=start=>{
+    const q=[start]; level.set(start, levels.length? Math.max(0,levels.length) : 0);
+    const base=level.get(start);
+    while(q.length){
+      const id=q.shift(), lv=level.get(id);
+      (levels[lv]=levels[lv]||[]).push(id);
+      const kids=adj.get(id).filter(k=>!level.has(k))
+        .sort((a,b)=>(a.startsWith("grp:")-b.startsWith("grp:"))||a.localeCompare(b));
+      for(const k of kids){ level.set(k,lv+1); parent.set(k,id); q.push(k); }
+    }
+    return base;
+  };
+  if(root && adj.has(root)) visit(root);
+  // remaining (disconnected) components below
+  for(const n of nodes){ if(!level.has(n.id)) visit(n.id); }
+  // order within a level follows the parents' order
+  for(let i=1;i<levels.length;i++){
+    const prev=levels[i-1]||[];
+    levels[i].sort((a,b)=>(prev.indexOf(parent.get(a))-prev.indexOf(parent.get(b)))
+      ||(a.startsWith("grp:")-b.startsWith("grp:"))||a.localeCompare(b));
+  }
+  const byId=new Map(nodes.map(n=>[n.id,n]));
+  const levelY=[];
+  let y=PAD;
+  levels.forEach((ids,i)=>{ levelY[i]=y; y+=Math.max(...ids.map(id=>nh(byId.get(id))))+VGAP; });
+  // tidy tree: every subtree gets its own horizontal span, children centred under their parent
+  const kids=new Map();
+  levels.forEach(ids=>ids.forEach(id=>{ const p=parent.get(id); if(p) (kids.get(p)||kids.set(p,[]).get(p)).push(id); }));
+  const width=new Map();
+  const measure=id=>{
+    const ks=kids.get(id)||[];
+    const w=ks.length? Math.max(NW, ks.reduce((s,k)=>s+measure(k),0)+HGAP*(ks.length-1)) : NW;
+    width.set(id,w); return w;
+  };
+  const pos=new Map();
+  const place=(id,x0)=>{
+    const w=width.get(id), ks=kids.get(id)||[];
+    pos.set(id,{x:x0+(w-NW)/2, y:levelY[level.get(id)]});
+    const inner=ks.reduce((s,k)=>s+width.get(k),0)+HGAP*(ks.length-1);
+    let x=x0+(w-inner)/2;
+    for(const k of ks){ place(k,x); x+=width.get(k)+HGAP; }
+  };
+  // each component (main tree, then disconnected ones) starts on its own levels, so they can share x
+  const roots=nodes.map(n=>n.id).filter(id=>!parent.has(id));
+  const W=Math.max(600, ...roots.map(r=>measure(r)+PAD*2));
+  for(const r of roots) place(r,(W-width.get(r))/2);
+  return {pos, W, H:y-VGAP+PAD};
+}
+
+function portLabel(x,y,txt){
+  if(!txt) return "";
+  const w=txt.length*6+8;
+  return `<rect class="portbg" x="${x-w/2}" y="${y-8}" width="${w}" height="13" rx="3"/>`+
+         `<text class="port" x="${x}" y="${y+2}" text-anchor="middle">${esc(txt)}</text>`;
+}
+
+function render(){
+  const showCl=$("#showcl").checked;
+  const groups=showCl? clientGroups(new Set(T.nodes.filter(n=>n.managed||n.inferred).map(n=>n.id))) : [];
+  const nodes=[...T.nodes, ...groups];
+  const edges=[...T.edges, ...groups.map(g=>({a:g.device, b:g.id, a_port:g.port, b_port:null, kind:"cl"+(g.wifi?" wifi":""), group:true}))];
+  $("#banner").innerHTML = !nodes.length? `<div class="banner">${esc(t("topo.no_devices"))}</div>`
+    : !T.has_neighbors? `<div class="banner">${t("topo.no_neighbors")}</div>` : "";
+  const {pos,W,H}=layout(nodes,edges,T.root);
+  const svg=$("#topo");
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`); svg.setAttribute("width",W); svg.setAttribute("height",H);
+  // spread the start points of edges leaving the same node along its bottom edge
+  const down=new Map();
+  for(const e of edges){
+    const a=pos.get(e.a), b=pos.get(e.b); if(!a||!b||a.y===b.y) continue;
+    const [top,bot]= a.y<b.y? [e.a,b] : [e.b,a];
+    (down.get(top)||down.set(top,[]).get(top)).push([e,bot.x]);
+  }
+  const startX=new Map();
+  for(const [id,list] of down){
+    list.sort((p,q)=>p[1]-q[1]);
+    list.forEach(([e],k)=>startX.set(e, pos.get(id).x+NW*(k+1)/(list.length+1)));
+  }
+  let h="";
+  for(const e of edges){
+    const a=pos.get(e.a), b=pos.get(e.b); if(!a||!b) continue;
+    const [top,bot,tp,bp]= a.y<=b.y? [a,b,e.a_port,e.b_port] : [b,a,e.b_port,e.a_port];
+    const topN=top===a? e.a : e.b;
+    const x1=startX.get(e)??top.x+NW/2, y1=top.y+nh(nodes.find(n=>n.id===topN)), x2=bot.x+NW/2, y2=bot.y;
+    const same=top.y===bot.y;
+    // same level: straight line between neighbours, otherwise an arc below so it does not cross other nodes
+    const [l,r]= a.x<b.x? [a,b] : [b,a];
+    const adjacent= r.x-l.x <= NW+HGAP+1;
+    const d= !same? `M${x1},${y1} C${x1},${(y1+y2)/2} ${x2},${(y1+y2)/2} ${x2},${y2}`
+      : adjacent? `M${l.x+NW},${l.y+NH/2} L${r.x},${r.y+NH/2}`
+      : `M${l.x+NW/2},${l.y+NH} C${l.x+NW/2},${l.y+NH+VGAP*0.7} ${r.x+NW/2},${r.y+NH+VGAP*0.7} ${r.x+NW/2},${r.y+NH}`;
+    h+= e.group? `<path class="edge ${esc(e.kind)}" d="${d}"/>`
+      : `<path class="edge ${esc(e.kind)}" d="${d}"><title>${esc(e.a)} ${esc(e.a_port||"?")} ↔ ${esc(e.b_port||"?")} ${esc(e.b)}</title></path>`;
+    if(!same){
+      // point on the cubic curve at t (control points share the middle y)
+      const ym=(y1+y2)/2, bz=t=>{ const u=1-t;
+        return [u*u*u*x1+3*u*u*t*x1+3*u*t*t*x2+t*t*t*x2, u*u*u*y1+3*u*u*t*ym+3*u*t*t*ym+t*t*t*y2]; };
+      const [ax,ay]=bz(0.3), [bx,by]=bz(0.85);
+      h+=portLabel(ax, ay, tp);
+      h+=portLabel(bx, by, bp);
+    }
+  }
+  const cut=(s,n)=>s.length>n? s.slice(0,n-1)+"…" : s;
+  for(const g of groups){
+    const p=pos.get(g.id); if(!p) continue;
+    const head=g.wifi? (g.ssid||g.port||"wifi") : t("topo.grp.wired");
+    let rows="";
+    g.clients.slice(0,GMAX).forEach((c,i)=>{
+      // behind an inferred switch the port belongs to the upstream device, so show the IP instead
+      const right=g.wifi? (c.signal!=null? `${c.signal} dBm` : "")
+        : g.device.startsWith("ext:sw:")? (c.ip||"").split(".").slice(-2).join(".") : (c.interface||"");
+      const y=GHEAD+i*GROW+9;
+      rows+=`<g class="row"><title>${esc(c.name)}${c.ip? "\n"+esc(c.ip):""}\n${esc(c.mac)}${c.vendor&&c.vendor!==c.name? "\n"+esc(c.vendor):""}</title>
+        <text class="cn" x="10" y="${y}">${esc(cut(c.name, right? 24-Math.min(right.length,9) : 24))}</text>
+        <text class="cx" x="${NW-8}" y="${y}" text-anchor="end">${esc(cut(right,9))}</text></g>`;
+    });
+    if(g.clients.length>GMAX)
+      rows+=`<text class="cx" x="10" y="${GHEAD+GMAX*GROW+9}">${esc(t("topo.more",{n:g.clients.length-GMAX}))}</text>`;
+    h+=`<g class="grp" transform="translate(${p.x},${p.y})">
+      <rect width="${NW}" height="${g.h}"/>
+      <text class="gh" x="10" y="15">${esc(cut(head,15))}</text>
+      <text class="cx" x="${NW-8}" y="15" text-anchor="end">${esc(tn("topo.clients",g.clients.length))}</text>
+      ${rows}</g>`;
+  }
+  for(const n of T.nodes){
+    const p=pos.get(n.id); if(!p) continue;
+    const cls=!n.managed? "ext" : n.reachable? "up" : "down";
+    const role=n.managed? tOr("topo.role."+n.role, n.role||"") : t("topo.role.external");
+    const sub=[role, n.model].filter(Boolean).join(" · ");
+    h+=`<g class="node ${cls}" transform="translate(${p.x},${p.y})">
+      <title>${esc(n.label)}${n.host? "\n"+esc(n.host):""}${n.model? "\n"+esc(n.model):""}</title>
+      <rect width="${NW}" height="${NH}"/>
+      <text class="nm" x="10" y="18">${esc(n.label.length>18? n.label.slice(0,17)+"…" : n.label)}</text>
+      <text class="sb" x="10" y="33">${esc(sub.length>24? sub.slice(0,23)+"…" : sub)}</text>
+      <text class="sb" x="10" y="48">${esc(n.host||"")}</text>
+      ${n.managed||n.inferred? `<text class="cl" x="${NW-10}" y="48" text-anchor="end">${esc(tn("topo.clients",n.clients||0))}</text>`:""}
+    </g>`;
+  }
+  svg.innerHTML=h;
+  const lbl=id=>(nodes.find(n=>n.id===id)||{}).label||id;
+  $("#links").innerHTML = T.edges.length? T.edges.map(e=>`<tr><td><b>${esc(lbl(e.a))}</b></td><td class="dim">${esc(e.a_port||"–")}</td>
+    <td class="dim">↔</td><td class="dim">${esc(e.b_port||"–")}</td><td><b>${esc(lbl(e.b))}</b></td>
+    <td>${esc(t("topo.kind."+e.kind))}${e.capsman&&e.kind!=="capsman"? " + CAPsMAN":""}</td></tr>`).join("")
+    : `<tr><td colspan="6" class="dim">${esc(t("topo.no_links"))}</td></tr>`;
+}
+
+async function load(){
+  try{
+    const r=await fetch("/api/topology");
+    if(r.status===401){ location.href="/login"; return; }
+    T=await r.json();
+    T.nodes.forEach(n=>{ n.label=n.label||t("topo.unmanaged_switch"); });
+    render();
+    $("#meta").textContent = T.updated_at? t("common.updated_at",{time:new Date(T.updated_at*1000).toLocaleTimeString(I18N.locale)}) : t("common.waiting_poll");
+  }catch(e){ $("#meta").textContent=t("common.backend_down"); }
+}
+I18N.ready.then(()=>{
+  const cb=$("#showcl");
+  cb.checked=store("topo.showClients")!=="0";
+  cb.addEventListener("change",()=>{ store("topo.showClients", cb.checked? "1":"0"); if(T) render(); });
+  load(); setInterval(load, 30000);
+});
+</script>
+</body>
+</html>

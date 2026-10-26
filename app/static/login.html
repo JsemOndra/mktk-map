@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="title.login">mktk-map</title>
+<style>
+  :root{--bg:#0b0f14;--panel:#111823;--panel2:#0e141d;--line:#1e2a3a;
+    --txt:#c9d6e3;--dim:#5f7288;--ok:#3ddc84;--err:#ff5d5d;--wifi:#4db8ff}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:'JetBrains Mono','Cascadia Code',ui-monospace,Consolas,monospace;
+    display:flex;align-items:center;justify-content:center;min-height:100vh;font-size:13px}
+  .box{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:28px 32px;width:300px}
+  h1{font-size:15px;letter-spacing:2px;margin:0 0 20px;text-align:center}
+  h1 b{color:var(--ok)}
+  input{display:block;width:100%;box-sizing:border-box;background:var(--panel2);
+    border:1px solid var(--line);color:var(--txt);font-family:inherit;font-size:13px;
+    padding:8px 10px;border-radius:4px;outline:none;margin-bottom:10px}
+  input:focus{border-color:var(--wifi)}
+  button{width:100%;background:none;border:1px solid var(--ok);color:var(--ok);
+    font-family:inherit;font-size:12px;letter-spacing:1px;padding:8px;border-radius:4px;cursor:pointer}
+  button:hover{background:#12331f}
+  #msg{color:var(--err);font-size:11px;min-height:16px;margin-top:10px;text-align:center}
+</style>
+<link rel="icon" href="/static/logo.svg" type="image/svg+xml">
+<script src="/static/i18n.js"></script>
+</head>
+<body>
+<div class="box">
+  <h1>MKTK<b>·</b>MAP</h1>
+  <input id="u" data-i18n-placeholder="common.username" autocomplete="username">
+  <input id="p" type="password" data-i18n-placeholder="common.password" autocomplete="current-password">
+  <button onclick="go()" data-i18n="login.submit"></button>
+  <div id="msg"></div>
+</div>
+<script>
+async function go(){
+  const msg=document.getElementById("msg");
+  msg.textContent="";
+  const r=await fetch("/api/login",{method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({username:document.getElementById("u").value,
+                         password:document.getElementById("p").value})});
+  if(r.ok) location.href="/";
+  else{ let d=null; try{ d=(await r.json()).detail; }catch(e){} msg.textContent=d||t("common.error"); }
+}
+document.addEventListener("keydown",e=>{if(e.key==="Enter")go()});
+</script>
+</body>
+</html>
