@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.15-slim
 # unprivileged user the app runs as (high uid so it does not match a user on the host)
 RUN useradd --uid 10001 --user-group --home-dir /srv --no-create-home --shell /usr/sbin/nologin app
 WORKDIR /srv
