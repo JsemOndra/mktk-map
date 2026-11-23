@@ -1,4 +1,4 @@
-fastapi==0.162.*
+fastapi==0.165.*
 uvicorn[standard]==0.54.*
 librouteros==4.2.2
 ruamel.yaml==0.19.*
